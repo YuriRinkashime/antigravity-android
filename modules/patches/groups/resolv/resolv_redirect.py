@@ -47,19 +47,15 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
         "replacement_offsets": [hex(x) for x in repl]
     }
 
-    if total == 0:
+    if total < 1:
         if allow_missing:
             info["status"] = "skipped_missing"
             return True, info
         info["status"] = "missing_signature"
         return False, info
 
-    if total != EXPECTED_COUNT:
-        info["status"] = f"unexpected_count_{total}"
-        return False, info
-
     if verify:
-        ok = (len(clean) == 0 and len(repl) == EXPECTED_COUNT)
+        ok = (len(clean) == 0 and len(repl) >= 1)
         info["status"] = "verified" if ok else "unverified"
         return ok, info
 

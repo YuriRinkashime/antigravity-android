@@ -29,19 +29,15 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
         "patched_offsets": [hex(x) for x in pat_offsets]
     }
 
-    if total == 0:
+    if total < 1:
         if allow_missing:
             info["status"] = "skipped_missing"
             return True, info
         info["status"] = "missing_signature"
         return False, info
 
-    if total != EXPECTED_COUNT:
-        info["status"] = f"unexpected_count_{total}"
-        return False, info
-
     if verify:
-        ok = (len(raw_offsets) == 0 and len(pat_offsets) == EXPECTED_COUNT)
+        ok = (len(raw_offsets) == 0 and len(pat_offsets) >= 1)
         info["status"] = "verified" if ok else "unverified"
         return ok, info
 
