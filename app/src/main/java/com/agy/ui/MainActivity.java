@@ -296,7 +296,6 @@ public class MainActivity extends Activity
     @Override
     protected void onStop() {
         super.onStop();
-        com.agy.theme.LauncherIconSwitcher.onAppBackgrounded(this);
     }
 
     @Override
@@ -314,9 +313,6 @@ public class MainActivity extends Activity
 
     private void refreshTheme() {
         ThemeRefresher.refresh(this, themeManager, rootLayout, splash, webViewHost);
-        if (themeManager != null) {
-            com.agy.theme.LauncherIconSwitcher.scheduleSwitch(themeManager.isDark());
-        }
         if (webViewHost != null && webViewHost.getWebView() != null) {
             String resolved = themeManager != null ? themeManager.getTheme() : "light";
             webViewHost.getWebView().evaluateJavascript(

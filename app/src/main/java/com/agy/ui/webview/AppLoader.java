@@ -45,7 +45,8 @@ public final class AppLoader {
         }
         String origin = "https://127.0.0.1:" + port + "/";
         String historyUrl = origin + "?hostTheme=" + hostTheme;
-        webView.loadDataWithBaseURL(origin, AppHtmlInjector.inject(html, bridge, theme),
+        boolean isDesktop = DesktopModePrefs.isDesktopMode(context);
+        webView.loadDataWithBaseURL(origin, AppHtmlInjector.inject(html, bridge, theme, isDesktop),
                 "text/html", "UTF-8", historyUrl);
     }
 }

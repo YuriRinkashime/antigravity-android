@@ -26,6 +26,15 @@ public final class AppHtmlInjector {
     }
 
     public static String inject(String html, AndroidBridge bridge, ThemeManager theme) {
+        return inject(html, bridge, theme, false);
+    }
+
+    public static String inject(String html, AndroidBridge bridge, ThemeManager theme, boolean isDesktop) {
+        if (isDesktop && html != null) {
+            html = html.replace(
+                    "content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0\"",
+                    "content=\"width=1024, initial-scale=0.75, minimum-scale=0.25, maximum-scale=3.0, user-scalable=yes, viewport-fit=cover\"");
+        }
         String boot;
         try {
             JSONObject config = new JSONObject(bridge.getConfig());
