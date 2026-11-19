@@ -15,6 +15,7 @@
 ### 1. Синхронизация с официальным релизом Google Antigravity v2.33.0
 * Синхронизированы версия приложения (`APP_VERSION_NAME=2.33.0`) и версия ядра (`CORE_VERSION=2.33.0`).
 * Обновлен конвейер бинарных патчей (`modules/patches`): добавлена поддержка унифицированных сигнатур перехвата `sigill_handler` и `resolv_redirect` для совместимости со свежими сборками Go runtime.
+* Исправлены сигнатуры `crash_suppressor` (`failfast_cpu_and_atomic`) для Google Antigravity v2.33.0: устранен сбой `FATAL ERROR: This binary was compiled with lse enabled` и аварийное завершение с кодом 132 (SIGILL) на процессорах ARMv8.0-A (Cortex-A53, Helio G25/A22, Snapdragon 685).
 * Пройдена полная модульная верификация всех подсистем (`core`, `patches`, `io`, `runner`, `env`, `builder`).
 
 ---
