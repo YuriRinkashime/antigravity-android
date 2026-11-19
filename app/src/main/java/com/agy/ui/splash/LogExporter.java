@@ -88,6 +88,19 @@ public final class LogExporter {
                 sb.append("Error reading log file: ").append(e.getMessage()).append("\n");
             }
         }
+
+        File sigillLog = new File(context.getFilesDir(), "logs/sigill.log");
+        if (sigillLog.exists() && sigillLog.length() > 0) {
+            sb.append("\n=== SIGILL Log (files/logs/sigill.log) ===\n");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(sigillLog), UTF8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+            } catch (Exception e) {
+                sb.append("Error reading sigill log: ").append(e.getMessage()).append("\n");
+            }
+        }
         return sb.toString();
     }
 

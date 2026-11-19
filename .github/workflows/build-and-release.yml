@@ -54,7 +54,7 @@ jobs:
       - name: Install Android Build Tools & System Utilities
         run: |
           for i in 1 2 3; do
-            sudo apt-get update && sudo apt-get install -y --fix-missing aapt zipalign apksigner file zip unzip gzip && break || sleep 5
+            sudo apt-get update && sudo apt-get install -y --fix-missing aapt zipalign apksigner file zip unzip gzip gcc-aarch64-linux-gnu && break || sleep 5
           done
 
       - name: Prepare Vendor Inputs & Signing Keystore

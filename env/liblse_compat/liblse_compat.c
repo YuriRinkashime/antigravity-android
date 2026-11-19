@@ -295,11 +295,35 @@ static bool emulate_lse(ucontext_t *uc, uint32_t insn) {
             return true;
         } else {
             unsigned __int128 *p = (unsigned __int128 *)addr;
-            unsigned __int128 compare_val = (((unsigned __int128)get_reg(uc, rs + 1, false)) << 64) | get_reg(uc, rs, false);
-            unsigned __int128 new_val = (((unsigned __int128)get_reg(uc, rt + 1, false)) << 64) | get_reg(uc, rt, false);
-            __atomic_compare_exchange_n(p, &compare_val, new_val, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-            set_reg(uc, rs, (uint64_t)compare_val, 3);
-            set_reg(uc, rs + 1, (uint64_t)(compare_val >> 64), 3);
+            uint64_t cmp_lo = get_reg(uc, rs, false);
+            uint64_t cmp_hi = get_reg(uc, rs + 1, false);
+            uint64_t new_lo = get_reg(uc, rt, false);
+            uint64_t new_hi = get_reg(uc, rt + 1, false);
+            uint64_t old_lo, old_hi;
+            uint32_t res;
+
+            do {
+                __asm__ volatile (
+                    "ldxp %0, %1, [%3]\n"
+                    : "=&r"(old_lo), "=&r"(old_hi)
+                    : "m"(*p), "r"(p)
+                    : "memory"
+                );
+                if (old_lo != cmp_lo || old_hi != cmp_hi) {
+                    set_reg(uc, rs, old_lo, 3);
+                    set_reg(uc, rs + 1, old_hi, 3);
+                    return true;
+                }
+                __asm__ volatile (
+                    "stxp %w0, %2, %3, [%4]\n"
+                    : "=&r"(res)
+                    : "m"(*p), "r"(new_lo), "r"(new_hi), "r"(p)
+                    : "memory"
+                );
+            } while (__builtin_expect(res != 0, 0));
+
+            set_reg(uc, rs, old_lo, 3);
+            set_reg(uc, rs + 1, old_hi, 3);
             return true;
         }
     }
@@ -729,15 +753,134 @@ static bool emulate_fcma(ucontext_t *uc, uint32_t insn) {
     return true;
 }
 
+static bool emulate_mrs(ucontext_t *uc, uint32_t insn) {
+    // MRS Xt, <system_register>: 1101 0101 0011 ...
+    // Mask: 0xFFF00000 == 0xD5300000
+    if ((insn & 0xFFF00000) == 0xD5300000) {
+        unsigned rt = insn & 0x1F;
+        uint32_t sys = (insn >> 5) & 0x7FFF;
+        uint64_t val = 0;
+
+        switch (sys) {
+            case 0x4000: // MIDR_EL1 (Main ID Register)
+                // Cortex-A53 r0p4: Implementer=0x41 ('A'), Variant=0, Arch=0xF (ARMv8), Part=0xD03 (Cortex-A53), Rev=4
+                val = 0x410FD034ULL;
+                break;
+            case 0x4040: // ID_AA64PFR0_EL1
+                // FP=1, AdvSIMD=1
+                val = 0x00000011ULL;
+                break;
+            case 0x4060: // ID_AA64ISAR0_EL1
+                val = 0ULL;
+                break;
+            case 0x4061: // ID_AA64ISAR1_EL1
+                val = 0ULL;
+                break;
+            default:
+                val = 0ULL;
+                break;
+        }
+
+        if (rt != 31) {
+            set_reg(uc, rt, val, 3);
+        }
+        return true;
+    }
+    return false;
+}
+
+static inline uint32_t crc32_step(uint32_t crc, uint8_t byte, uint32_t poly) {
+    crc ^= byte;
+    for (int i = 0; i < 8; i++) {
+        crc = (crc >> 1) ^ (poly & -(crc & 1));
+    }
+    return crc;
+}
+
+static bool emulate_crc32(ucontext_t *uc, uint32_t insn) {
+    // ARMv8 CRC32 / CRC32C: bits 29..24 = 011010 (0x1A), bit 23 = 1, bits 15..13 = 010 (0x2)
+    // Mask: 0x7FE0E000 == 0x1AC04000
+    if ((insn & 0x7FE0E000) == 0x1AC04000) {
+        unsigned sz = (insn >> 21) & 3;
+        bool is_c = ((insn >> 12) & 1) != 0;
+        unsigned rm = (insn >> 16) & 0x1F;
+        unsigned rn = (insn >> 5) & 0x1F;
+        unsigned rd = insn & 0x1F;
+
+        uint32_t poly = is_c ? 0x82F63B78U : 0xEDB88320U;
+        uint32_t crc = (uint32_t)get_reg(uc, rn, false);
+        uint64_t data = get_reg(uc, rm, false);
+
+        int bytes = 1 << sz;
+        for (int i = 0; i < bytes; i++) {
+            crc = crc32_step(crc, (uint8_t)(data >> (i * 8)), poly);
+        }
+
+        if (rd != 31) {
+            set_reg(uc, rd, (uint64_t)crc, 2);
+        }
+        return true;
+    }
+    return false;
+}
+
+static void direct_sigill_log(uintptr_t pc, uint32_t insn) {
+    const char *paths[] = {
+        "/data/user/0/com.agy/files/logs/sigill.log",
+        "/data/user/0/com.agy.dev/files/logs/sigill.log"
+    };
+    for (int p = 0; p < 2; p++) {
+        register long x0 __asm__("x0") = -100; // AT_FDCWD
+        register long x1 __asm__("x1") = (long)paths[p];
+        register long x2 __asm__("x2") = 0x441; // O_WRONLY | O_CREAT | O_APPEND
+        register long x3 __asm__("x3") = 0644;
+        register long x8 __asm__("x8") = 56; // __NR_openat
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "memory");
+        int fd = (int)x0;
+        if (fd >= 0) {
+            char buf[128];
+            int pos = 0;
+            const char *hdr = "[lse_compat] FATAL: unhandled SIGILL at PC=0x";
+            while (hdr[pos]) { buf[pos] = hdr[pos]; pos++; }
+            for (int i = 15; i >= 0; i--) {
+                int nib = (int)((pc >> (i * 4)) & 0xF);
+                buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+            }
+            const char *mid = " INSN=0x";
+            int mpos = 0;
+            while (mid[mpos]) { buf[pos++] = mid[mpos++]; }
+            for (int i = 7; i >= 0; i--) {
+                int nib = (int)((insn >> (i * 4)) & 0xF);
+                buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+            }
+            buf[pos++] = '\n';
+
+            register long w0 __asm__("x0") = fd;
+            register long w1 __asm__("x1") = (long)buf;
+            register long w2 __asm__("x2") = pos;
+            register long w8 __asm__("x8") = 64; // __NR_write
+            __asm__ volatile("svc #0" : "+r"(w0) : "r"(w1), "r"(w2), "r"(w8) : "memory");
+
+            register long c0 __asm__("x0") = fd;
+            register long c8 __asm__("x8") = 57; // __NR_close
+            __asm__ volatile("svc #0" : "+r"(c0) : "r"(c8) : "memory");
+            break;
+        }
+    }
+}
+
 static void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
     ucontext_t *uc = (ucontext_t *)ucontext;
     uintptr_t pc = uc->uc_mcontext.pc;
     uint32_t insn = *(uint32_t *)pc;
 
-    if (emulate_lse(uc, insn) || emulate_dotprod(uc, insn) || emulate_rdm(uc, insn) || emulate_fcma(uc, insn)) {
+    if (emulate_lse(uc, insn) || emulate_mrs(uc, insn) || emulate_crc32(uc, insn) ||
+        emulate_dotprod(uc, insn) || emulate_rdm(uc, insn) || emulate_fcma(uc, insn)) {
         uc->uc_mcontext.pc += 4;
         return;
     }
+
+    direct_sigill_log((uintptr_t)pc, insn);
 
     log_raw("[lse_compat] FATAL: unhandled SIGILL at PC=");
     log_hex((uint64_t)pc);

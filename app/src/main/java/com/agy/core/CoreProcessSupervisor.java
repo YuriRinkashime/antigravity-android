@@ -93,11 +93,15 @@ public final class CoreProcessSupervisor {
                     if (stopping) {
                         break;
                     }
+                    try {
+                        streamer.join(1000);
+                    } catch (InterruptedException ignored) {
+                    }
                     int code = ProcessUtils.exitCode(proc);
                     if (CoreRuntimeState.lastError == null) {
                         CoreRuntimeState.lastError =
                                 "core did not become ready within " + CoreReadyProbe.READY_TIMEOUT_MS + "ms"
-                                + (code != -1 ? " (exit code " + code + ")" : "");
+                                + (code != -1 ? " (exit code " + code + describeExitCode(code, appContext.getFilesDir()) + ")" : "");
                         CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
                     }
                     destroy(proc);
@@ -106,7 +110,7 @@ public final class CoreProcessSupervisor {
                     if (attempt > CoreRestartPolicy.MAX_RESTARTS) {
                         CoreRuntimeState.restarting = false;
                         CoreRuntimeState.lastError = "core failed to start after " + CoreRestartPolicy.MAX_RESTARTS
-                                + " attempts (last exit code " + code + ")"
+                                + " attempts (last exit code " + code + describeExitCode(code, appContext.getFilesDir()) + ")"
                                 + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
                         CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
                         com.agy.log.CrashRecorder.recordCrash(appContext, code, 0, CoreRuntimeState.lastError, logBuffer);
@@ -114,7 +118,7 @@ public final class CoreProcessSupervisor {
                     }
                     long delay = CoreRestartPolicy.delayFor(attempt);
                     CoreRuntimeState.restarting = true;
-                    CoreRuntimeState.lastError = "core startup failed (code " + code
+                    CoreRuntimeState.lastError = "core startup failed (code " + code + describeExitCode(code, appContext.getFilesDir())
                             + "); retrying in " + (delay / 1000) + "s (attempt "
                             + attempt + "/" + CoreRestartPolicy.MAX_RESTARTS + ")"
                             + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
@@ -135,6 +139,10 @@ public final class CoreProcessSupervisor {
                 if (stopping) {
                     break;
                 }
+                try {
+                    streamer.join(1000);
+                } catch (InterruptedException ignored) {
+                }
 
                 int code = ProcessUtils.exitCode(proc);
                 if (System.currentTimeMillis() - readyAt >= CoreRestartPolicy.SUSTAINED_READY_MS) {
@@ -142,7 +150,7 @@ public final class CoreProcessSupervisor {
                 }
                 CoreRuntimeState.serverUrl = null;
                 attempt++;
-                String exitDesc = describeExitCode(code);
+                String exitDesc = describeExitCode(code, appContext.getFilesDir());
                 String tail = getLastLinesFromLog(appContext.getFilesDir(), 15);
                 if (attempt > CoreRestartPolicy.MAX_RESTARTS) {
                     CoreRuntimeState.restarting = false;
@@ -273,20 +281,44 @@ public final class CoreProcessSupervisor {
         return TextUtils.join("\n", lines);
     }
 
-    private static String describeExitCode(int code) {
+    private static String getSigillLogTail(java.io.File filesDir) {
+        java.io.File sigillFile = new java.io.File(filesDir, "logs/sigill.log");
+        if (!sigillFile.isFile() || sigillFile.length() == 0) {
+            return "";
+        }
+        try {
+            return com.agy.util.IoUtil.readAll(new java.io.FileInputStream(sigillFile), "UTF-8").trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static String describeExitCode(int code, java.io.File filesDir) {
+        String base;
         switch (code) {
             case 137:
-                return " [SIGKILL / system Out-Of-Memory LMK]";
+                base = " [SIGKILL / system Out-Of-Memory LMK]";
+                break;
             case 139:
-                return " [SIGSEGV / segmentation fault]";
+                base = " [SIGSEGV / segmentation fault]";
+                break;
             case 134:
-                return " [SIGABRT / abort]";
+                base = " [SIGABRT / abort]";
+                break;
             case 132:
-                return " [SIGILL / illegal instruction]";
+                base = " [SIGILL / illegal instruction]";
+                String sigill = getSigillLogTail(filesDir);
+                if (!sigill.isEmpty()) {
+                    base += " - " + sigill;
+                }
+                break;
             case 143:
-                return " [SIGTERM / terminated]";
+                base = " [SIGTERM / terminated]";
+                break;
             default:
-                return "";
+                base = "";
+                break;
         }
+        return base;
     }
 }
