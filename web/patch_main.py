@@ -18,8 +18,29 @@ def patch_main(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
+    modified = False
+
+    # Fix voice left_home unmount abort bug
+    target_unmount = 'E.current!==YU||DU||kV("left_home")'
+    replacement_unmount = 'E.current!==YU||DU||XU||kV("left_home")'
+    if target_unmount in content:
+        content = content.replace(target_unmount, replacement_unmount)
+        print("[web-patch] Patched voice left_home unmount race condition")
+        modified = True
+
+    # Separate AbortError from NotReadableError in $Nb
+    target_err = 'case "NotReadableError":case "AbortError":return oU("Microphone is in use or unavailable.");'
+    replacement_err = 'case "NotReadableError":return oU("Microphone is in use or unavailable.");case "AbortError":return oU("Microphone connection was aborted. Please retry.");'
+    if target_err in content:
+        content = content.replace(target_err, replacement_err)
+        print("[web-patch] Patched voice AbortError message")
+        modified = True
+
     if "Desktop Mode" in content or "ag_desktop_mode" in content:
         print("[web-patch] Desktop Mode toggle already present in main.js")
+        if modified:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
         return True
 
     # 1. JSX Theme element injection: find Theme element in Appearance
