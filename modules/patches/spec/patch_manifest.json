@@ -17,10 +17,11 @@
     },
     {
       "name": "syscalls",
-      "description": "Android seccomp faccessat2/fchmodat2 retargeting",
+      "description": "Android seccomp faccessat2/fchmodat2/pidfd_open retargeting",
       "expected": {
         "faccessat2": 1,
-        "fchmodat2": 1
+        "fchmodat2": 1,
+        "pidfd": 1
       }
     },
     {
