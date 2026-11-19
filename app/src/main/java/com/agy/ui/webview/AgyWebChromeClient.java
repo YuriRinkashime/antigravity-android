@@ -71,36 +71,42 @@ public final class AgyWebChromeClient extends WebChromeClient {
         if (request == null) return;
         android.app.Activity activity = com.agy.ui.MainActivity.activeActivity;
         if (activity == null) {
-            request.deny();
+            try {
+                request.deny();
+            } catch (Throwable ignored) {}
             return;
         }
         activity.runOnUiThread(() -> {
-            java.util.List<String> neededPermissions = new java.util.ArrayList<>();
-            for (String res : request.getResources()) {
-                if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                        if (activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
-                                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            neededPermissions.add(android.Manifest.permission.RECORD_AUDIO);
+            try {
+                java.util.List<String> neededPermissions = new java.util.ArrayList<>();
+                for (String res : request.getResources()) {
+                    if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                            if (activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                neededPermissions.add(android.Manifest.permission.RECORD_AUDIO);
+                            }
                         }
-                    }
-                } else if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                        if (activity.checkSelfPermission(android.Manifest.permission.CAMERA)
-                                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            neededPermissions.add(android.Manifest.permission.CAMERA);
+                    } else if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                            if (activity.checkSelfPermission(android.Manifest.permission.CAMERA)
+                                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                neededPermissions.add(android.Manifest.permission.CAMERA);
+                            }
                         }
                     }
                 }
-            }
-            if (neededPermissions.isEmpty()) {
-                request.grant(request.getResources());
-            } else {
-                if (activity instanceof com.agy.ui.MainActivity) {
-                    ((com.agy.ui.MainActivity) activity).requestMediaPermissions(request, neededPermissions);
+                if (neededPermissions.isEmpty()) {
+                    request.grant(request.getResources());
                 } else {
-                    request.deny();
+                    if (activity instanceof com.agy.ui.MainActivity) {
+                        ((com.agy.ui.MainActivity) activity).requestMediaPermissions(request, neededPermissions);
+                    } else {
+                        request.deny();
+                    }
                 }
+            } catch (Throwable t) {
+                Log.w(TAG, "onPermissionRequest error: " + t.getMessage());
             }
         });
     }

@@ -164,7 +164,7 @@ public class MainActivity extends Activity
         splash.installExitAnimation(this);
 
         splashDeadline = System.currentTimeMillis() + SPLASH_TIMEOUT_MS;
-        requestStoragePermissions();
+        requestAppPermissions();
 
         startCoreService();
     }
@@ -328,6 +328,20 @@ public class MainActivity extends Activity
     public void onBackPressed() {
         if (!BackNavigator.handle(webViewHost != null ? webViewHost.getWebView() : null)) {
             super.onBackPressed();
+        }
+    }
+
+    private void requestAppPermissions() {
+        requestStoragePermissions();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            List<String> needed = new ArrayList<>();
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                    != PackageManager.PERMISSION_GRANTED) {
+                needed.add(android.Manifest.permission.RECORD_AUDIO);
+            }
+            if (!needed.isEmpty()) {
+                requestPermissions(needed.toArray(new String[0]), REQUEST_MEDIA_PERMISSIONS);
+            }
         }
     }
 

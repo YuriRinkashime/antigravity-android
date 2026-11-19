@@ -338,7 +338,45 @@ function installFetchRewrite() {
   global.__AG_FETCH_REWRITE__ = true;
 }
 
+function installMediaPolyfills() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      var origQ = navigator.permissions.query.bind(navigator.permissions);
+      navigator.permissions.query = function(d) {
+        if (d && d.name === 'microphone') {
+          return Promise.resolve({ name: 'microphone', state: 'granted', onchange: null });
+        }
+        return origQ(d);
+      };
+    }
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      var origG = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = function(c) {
+        var cl = c;
+        if (c && typeof c === 'object') {
+          cl = Object.assign({}, c);
+          if (cl.audio && typeof cl.audio === 'object') {
+            cl.audio = Object.assign({}, cl.audio);
+            delete cl.audio.voiceIsolation;
+          }
+        }
+        return origG(cl).catch(function(err) {
+          if (err && (err.name === 'NotReadableError' || err.name === 'OverconstrainedError' || err.name === 'AbortError')) {
+            return new Promise(function(res) { setTimeout(res, 180); }).then(function() {
+              return origG({ audio: true });
+            });
+          }
+          throw err;
+        });
+      };
+    }
+  } catch (e) {
+    if (typeof console !== 'undefined' && console.warn) console.warn('[AGY_AUDIO] media polyfill init error', e);
+  }
+}
+
 installFetchRewrite();
+installMediaPolyfills();
 
 /**
  * core/public-api.js - expose window.__agBridgeCore.
