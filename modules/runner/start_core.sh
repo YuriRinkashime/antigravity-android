@@ -106,17 +106,6 @@ export GODEBUG="netdns=go"
 if [ -f /proc/cpuinfo ] && (! grep -qi "aes" /proc/cpuinfo || ! grep -qi "atomics" /proc/cpuinfo); then
     export GODEBUG="$GODEBUG,cpu.all=off,cpu.aes=off,cpu.pmull=off,cpu.sha1=off,cpu.sha2=off,cpu.atomics=off,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0"
 fi
-
-# Dynamic memory limit for low-RAM devices (<= 3GB RAM) to prevent Android LMKD kills
-if [ -f /proc/meminfo ]; then
-    TOTAL_RAM_KB=$(grep -i "MemTotal" /proc/meminfo | awk '{print $2}')
-    if [ -n "$TOTAL_RAM_KB" ] && [ "$TOTAL_RAM_KB" -lt 3145728 ]; then
-        echo "[*] Low-RAM device detected (${TOTAL_RAM_KB} kB); applying proactive Go memory caps for lmkd stability..."
-        export GOMEMLIMIT="288MiB"
-        export GOGC="40"
-        export GODEBUG="$GODEBUG,madvdontneed=1"
-    fi
-fi
 export ANTIGRAVITY_VSCODE_HOST="1"
 export BROWSER="$RT/bin/xdg-open"
 
