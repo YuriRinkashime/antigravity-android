@@ -129,7 +129,6 @@ CMD+=(
     --https_server_port "$PORT"
     --csrf_token "$CSRF_TOKEN"
     --app_data_dir "antigravity-app-standalone"
-    --enable_sidecars
 )
 
 echo "[*] Launching core server on port $PORT..."
