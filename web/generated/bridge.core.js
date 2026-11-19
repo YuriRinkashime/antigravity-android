@@ -244,7 +244,11 @@ var RPC_MARKERS = ['exa.language_server_pb.', 'exa.host_bridge_pb.', '/exa.'];
 function rpcPathFrom(url) {
   if (!url) return null;
   var s = String(url);
-  if (/^(https?|blob|data|wss?|chrome-extension):/i.test(s)) return null;
+  if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null' && s.startsWith(window.location.origin)) {
+    s = s.slice(window.location.origin.length);
+  } else if (/^(https?|blob|data|wss?|chrome-extension):/i.test(s)) {
+    return null;
+  }
   var best = -1;
   for (var i = 0; i < RPC_MARKERS.length; i++) {
     var at = s.indexOf(RPC_MARKERS[i]);

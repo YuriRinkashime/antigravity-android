@@ -22,17 +22,12 @@ def patch_main(file_path):
         print("[web-patch] Desktop Mode toggle already present in main.js")
         return True
 
-    # 1. State hook injection pattern in Appearance component:
-    # Matches: var C=g!==3,D=g!==2,E=F=>G=>{F===t&&v(G)}; or legacy var B=f!==3,C=f!==2,D=E=>G=>{E===r&&u(G)};
-    hook_pattern = re.compile(r'(var\s+[A-Za-z0-9_$]+=[A-Za-z0-9_$]+!==3,\s*[A-Za-z0-9_$]+=[A-Za-z0-9_$]+!==2,\s*[A-Za-z0-9_$]+=[A-Za-z0-9_$]+=>\s*[A-Za-z0-9_$]+=>\{.*?\};)')
-    hook_match = hook_pattern.search(content)
-
-    # 2. JSX Theme element injection: find Theme element in Appearance
+    # 1. JSX Theme element injection: find Theme element in Appearance
     theme_idx = content.find('{label:"Theme"')
     theme_match = None
     react_id = "A"
     if theme_idx != -1:
-        # Search backwards within a reasonable window (e.g. 100 chars) for createElement
+        # Search backwards within a reasonable window for createElement
         window_start = max(0, theme_idx - 100)
         window_end = min(len(content), theme_idx + 500)
         window_text = content[window_start:window_end]
@@ -43,34 +38,55 @@ def patch_main(file_path):
         if theme_match:
             react_id = theme_match.group(1)
 
-    if not hook_match or not theme_match:
-        print(f"[web-patch] patterns not matched: hook={bool(hook_match)}, theme={bool(theme_match)}", file=sys.stderr)
+    if not theme_match:
+        print("[web-patch] pattern not matched: theme element not found", file=sys.stderr)
         return False
 
-    orig_hook = hook_match.group(1)
-    injected_hook = (
+    # 2. State hook injection pattern in Appearance component:
+    # Pattern A (legacy): Matches var C=g!==3,D=g!==2,E=F=>G=>{F===t&&v(G)};
+    # Search within reasonable distance from theme_idx to avoid slow regex scanning
+    search_window = content[max(0, theme_idx - 1200):theme_idx]
+    hook_pattern = re.compile(r'(var\s+[A-Za-z0-9_$]+=[A-Za-z0-9_$]+!==3,\s*[A-Za-z0-9_$]+=[A-Za-z0-9_$]+!==2,\s*[A-Za-z0-9_$]+=[A-Za-z0-9_$]+=>\s*[A-Za-z0-9_$]+=>\{.*?\};)')
+    hook_match = hook_pattern.search(search_window)
+
+    ret_target = None
+    if not hook_match:
+        # Pattern B (v2.33.0+): Hook right before the component return statement
+        ret_needle = f"return {react_id}.createElement("
+        if ret_needle in search_window:
+            ret_target = ret_needle
+
+    if not hook_match and not ret_target:
+        print(f"[web-patch] patterns not matched: hook=False, ret_target=False", file=sys.stderr)
+        return False
+
+    hook_code = (
         f"var [isDesktop,setIsDesktop]=(0,{react_id}.useState)(()=>{{"
         "try{if(window.Android&&typeof window.Android.isDesktopMode==='function')return window.Android.isDesktopMode();"
         "var s=localStorage.getItem('ag_desktop_mode');return s===null?!1:s==='true'}catch(_){return !1}});"
         f"var onDesktopToggle=(0,{react_id}.useCallback)(v=>{{"
         "setIsDesktop(v);try{localStorage.setItem('ag_desktop_mode',String(v));"
         "if(window.Android&&typeof window.Android.setDesktopMode==='function')window.Android.setDesktopMode(v)}catch(_){}},[]);"
-        + orig_hook
     )
 
     # Detect switch and setting item components
-    # Look for setting item component used with rightElement or contrast setting
     item_comp = "v3"
     switch_comp = "dX"
-    re_idx = content.find('rightElement:')
-    if re_idx != -1:
-        re_window = content[max(0, re_idx - 150):min(len(content), re_idx + 150)]
-        item_m = re.search(r'([A-Za-z0-9_$]+)\.createElement\(([A-Za-z0-9_$]+),\{label:[^,]+,description:[^,]+,rightElement:', re_window)
-        if item_m:
-            item_comp = item_m.group(2)
-        sw_m = re.search(r'rightElement:[A-Za-z0-9_$]+\.createElement\(([A-Za-z0-9_$]+),\{checked:', re_window)
-        if sw_m:
-            switch_comp = sw_m.group(1)
+    sw_m = re.search(r'createElement\(([A-Za-z0-9_$]+),\{[^\}]*label:[^,]+,[^\}]*rightElement:([A-Za-z0-9_$]+)\.createElement\(([A-Za-z0-9_$]+),\{checked:', content)
+    if sw_m:
+        item_comp = sw_m.group(1)
+        switch_comp = sw_m.group(3)
+    else:
+        # Fallback to secondary pattern
+        re_idx = content.find('rightElement:')
+        if re_idx != -1:
+            re_window = content[max(0, re_idx - 150):min(len(content), re_idx + 150)]
+            item_m = re.search(r'([A-Za-z0-9_$]+)\.createElement\(([A-Za-z0-9_$]+),\{label:[^,]+,description:[^,]+,rightElement:', re_window)
+            if item_m:
+                item_comp = item_m.group(2)
+            sw_m2 = re.search(r'rightElement:[A-Za-z0-9_$]+\.createElement\(([A-Za-z0-9_$]+),\{checked:', re_window)
+            if sw_m2:
+                switch_comp = sw_m2.group(1)
 
     orig_theme = theme_match.group(0)
     injected_theme = (
@@ -79,7 +95,19 @@ def patch_main(file_path):
         + f'rightElement:{react_id}.createElement({switch_comp},{{checked:isDesktop,onCheckedChange:onDesktopToggle}})}})'
     )
 
-    content = content.replace(orig_hook, injected_hook, 1)
+    if hook_match:
+        orig_hook = hook_match.group(1)
+        content = content.replace(orig_hook, hook_code + orig_hook, 1)
+    else:
+        pre_theme = content[:theme_idx]
+        post_theme = content[theme_idx:]
+        last_ret_pos = pre_theme.rfind(ret_target)
+        if last_ret_pos == -1:
+            print("[web-patch] failed to locate return statement before theme element", file=sys.stderr)
+            return False
+        pre_theme = pre_theme[:last_ret_pos] + hook_code + ret_target + pre_theme[last_ret_pos + len(ret_target):]
+        content = pre_theme + post_theme
+
     content = content.replace(orig_theme, injected_theme, 1)
 
     with open(file_path, "w", encoding="utf-8") as f:

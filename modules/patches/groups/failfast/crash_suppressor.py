@@ -37,6 +37,10 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
     cpu_total = len(raw_cpu) + len(repl_cpu)
     atomic_total = len(raw_atomic) + len(repl_atomic)
 
+    if (cpu_total == 0 and atomic_total == 0):
+        info["status"] = "skipped_missing"
+        return True, info
+
     if (cpu_total == 0 or atomic_total == 0):
         if allow_missing:
             info["status"] = "skipped_missing"
