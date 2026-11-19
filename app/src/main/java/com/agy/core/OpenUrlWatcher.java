@@ -55,13 +55,10 @@ public final class OpenUrlWatcher {
             IntentFilter filter = new IntentFilter("com.agy.ACTION_OPEN_URL");
             // The /system/bin/am shim is launched by the app-owned core process.
             // Keep delivery inside this signed app UID; external apps cannot spoof it.
-            String senderPermission = appContext.getPackageName()
-                    + ".permission.INTERNAL_BROADCAST";
             if (Build.VERSION.SDK_INT >= 33) {
-                appContext.registerReceiver(openUrlReceiver, filter, senderPermission, null,
-                        Context.RECEIVER_NOT_EXPORTED);
+                appContext.registerReceiver(openUrlReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                appContext.registerReceiver(openUrlReceiver, filter, senderPermission, null);
+                appContext.registerReceiver(openUrlReceiver, filter);
             }
             Log.i(TAG, "registered protected ACTION_OPEN_URL receiver");
         } catch (Throwable t) {

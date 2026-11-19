@@ -220,6 +220,7 @@ public final class ShellBridgeInstaller {
         sb.append("echo \"ANTIGRAVITY_OPEN_URL: $URL\"\n");
         sb.append("if [ -x /system/bin/am ]; then\n");
         sb.append("  /system/bin/am broadcast -a com.agy.ACTION_OPEN_URL -p ").append(pkg).append(" --es url \"$URL\" >/dev/null 2>&1 || true\n");
+        sb.append("  /system/bin/am start -a android.intent.action.VIEW -d \"$URL\" >/dev/null 2>&1 || true\n");
         sb.append("fi\n");
         sb.append("exit 0\n");
         writeScript(bridge, sb.toString());

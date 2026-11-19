@@ -63,8 +63,16 @@ public final class CoreEnvironment {
 
         // Pure-Go resolver keeps DNS independent of Android's missing /etc.
         String godebug = env.get("GODEBUG");
-        env.put("GODEBUG", godebug == null || godebug.isEmpty()
-                ? "netdns=go" : godebug + ",netdns=go");
+        StringBuilder godebugBuilder = new StringBuilder();
+        if (godebug != null && !godebug.isEmpty()) {
+            godebugBuilder.append(godebug).append(",");
+        }
+        godebugBuilder.append("netdns=go");
+        if (!hasArmHardwareCrypto()) {
+            Log.w(TAG, "CPU lacks ARMv8 crypto extension (AES/PMULL); disabling Go hardware crypto acceleration");
+            godebugBuilder.append(",arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0");
+        }
+        env.put("GODEBUG", godebugBuilder.toString());
         // Emits "ANTIGRAVITY_OPEN_URL: <url>" directly to stdout from language_server
         // so OpenUrlWatcher captures the auth URL and opens the external browser reliably.
         env.put("ANTIGRAVITY_VSCODE_HOST", "1");
@@ -85,5 +93,48 @@ public final class CoreEnvironment {
         // RuntimeManager.coreCommand() already preloads it into language_server via the
         // glibc loader's CLI argument: --preload <path>/liblse_compat.so.
         env.remove("LD_PRELOAD");
+    }
+
+    private static Boolean sHasArmCrypto = null;
+
+    /**
+     * Checks whether the current CPU supports ARMv8 Cryptography Extensions (AES & PMULL).
+     * On ARMv8.0 cores without hardware crypto (e.g. MediaTek Helio A22 / G25 / Cortex-A53),
+     * executing hardware crypto instructions raises SIGILL.
+     */
+    private static synchronized boolean hasArmHardwareCrypto() {
+        if (sHasArmCrypto != null) {
+            return sHasArmCrypto;
+        }
+        String arch = System.getProperty("os.arch", "").toLowerCase(java.util.Locale.US);
+        if (!arch.contains("aarch64") && !arch.contains("arm64") && !arch.contains("arm")) {
+            sHasArmCrypto = true;
+            return true;
+        }
+        File cpuinfo = new File("/proc/cpuinfo");
+        if (!cpuinfo.isFile() || !cpuinfo.canRead()) {
+            sHasArmCrypto = true;
+            return true;
+        }
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(cpuinfo))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim().toLowerCase(java.util.Locale.US);
+                if (line.startsWith("features") || line.startsWith("flags")) {
+                    int colon = line.indexOf(':');
+                    if (colon >= 0) {
+                        String flags = line.substring(colon + 1);
+                        boolean hasAes = flags.matches(".*\\baes\\b.*");
+                        boolean hasPmull = flags.matches(".*\\bpmull\\b.*");
+                        sHasArmCrypto = hasAes && hasPmull;
+                        return sHasArmCrypto;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "could not read /proc/cpuinfo for crypto probe: " + t.getMessage());
+        }
+        sHasArmCrypto = true;
+        return true;
     }
 }

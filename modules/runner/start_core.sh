@@ -103,6 +103,9 @@ export SHELL="$RT/bin/bash"
 export LANG="C.UTF-8"
 export LC_ALL="C.UTF-8"
 export GODEBUG="netdns=go"
+if [ -f /proc/cpuinfo ] && ! grep -qi "aes" /proc/cpuinfo; then
+    export GODEBUG="$GODEBUG,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0"
+fi
 export ANTIGRAVITY_VSCODE_HOST="1"
 export BROWSER="$RT/bin/xdg-open"
 

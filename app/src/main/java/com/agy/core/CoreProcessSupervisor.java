@@ -92,14 +92,37 @@ public final class CoreProcessSupervisor {
                     if (stopping) {
                         break;
                     }
-                    // Ready timeout / launch death is fatal: no blind auto-restart.
+                    int code = ProcessUtils.exitCode(proc);
                     if (CoreRuntimeState.lastError == null) {
                         CoreRuntimeState.lastError =
-                                "core did not become ready within " + CoreReadyProbe.READY_TIMEOUT_MS + "ms";
+                                "core did not become ready within " + CoreReadyProbe.READY_TIMEOUT_MS + "ms"
+                                + (code != -1 ? " (exit code " + code + ")" : "");
                         CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
                     }
                     destroy(proc);
-                    break;
+                    attempt++;
+                    String tail = getLastLinesFromLog(appContext.getFilesDir(), 15);
+                    if (attempt > CoreRestartPolicy.MAX_RESTARTS) {
+                        CoreRuntimeState.restarting = false;
+                        CoreRuntimeState.lastError = "core failed to start after " + CoreRestartPolicy.MAX_RESTARTS
+                                + " attempts (last exit code " + code + ")"
+                                + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
+                        CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
+                        com.agy.log.CrashRecorder.recordCrash(appContext, code, 0, CoreRuntimeState.lastError, logBuffer);
+                        break;
+                    }
+                    long delay = CoreRestartPolicy.delayFor(attempt);
+                    CoreRuntimeState.restarting = true;
+                    CoreRuntimeState.lastError = "core startup failed (code " + code
+                            + "); retrying in " + (delay / 1000) + "s (attempt "
+                            + attempt + "/" + CoreRestartPolicy.MAX_RESTARTS + ")"
+                            + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
+                    Log.w(TAG, CoreRuntimeState.lastError);
+                    CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
+                    com.agy.log.CrashRecorder.recordCrash(appContext, code, 0, CoreRuntimeState.lastError, logBuffer);
+                    CoreLogWriter.closeQuietly(log);
+                    sleepInterruptible(delay);
+                    continue;
                 }
 
                 long readyAt = System.currentTimeMillis();
