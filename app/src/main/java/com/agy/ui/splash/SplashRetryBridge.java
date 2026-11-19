@@ -70,5 +70,15 @@ public final class SplashRetryBridge {
                 }
             });
         }
+
+        @JavascriptInterface
+        public void backupProjects() {
+            MAIN.post(new Runnable() {
+                @Override
+                public void run() {
+                    LogExporter.exportProjects(context);
+                }
+            });
+        }
     }
 }

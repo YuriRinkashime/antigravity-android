@@ -167,4 +167,95 @@ public final class LogExporter {
             Toast.makeText(context, "Failed to export logs: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
+
+    /** Exports and archives the user's projects directory to external storage so data is never lost. */
+    public static void exportProjects(Context context) {
+        if (context == null) {
+            return;
+        }
+        File projectsDir = new File(context.getFilesDir(), "projects");
+        if (!projectsDir.exists() || !projectsDir.isDirectory()) {
+            Toast.makeText(context, "No projects directory found to backup", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        File[] children = projectsDir.listFiles();
+        if (children == null || children.length == 0) {
+            Toast.makeText(context, "Projects directory is empty", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            File savedZip = null;
+            String zipName = "antigravity-projects-backup-"
+                    + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".zip";
+
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            if (downloadsDir != null && (downloadsDir.exists() || downloadsDir.mkdirs())) {
+                File target = new File(downloadsDir, zipName);
+                if (writeZip(projectsDir, target)) {
+                    savedZip = target;
+                }
+            }
+
+            if (savedZip == null) {
+                File appExternal = context.getExternalFilesDir(null);
+                if (appExternal != null && (appExternal.exists() || appExternal.mkdirs())) {
+                    File target = new File(appExternal, zipName);
+                    if (writeZip(projectsDir, target)) {
+                        savedZip = target;
+                    }
+                }
+            }
+
+            if (savedZip != null) {
+                Toast.makeText(context, "Projects backed up to " + savedZip.getAbsolutePath(), Toast.LENGTH_LONG).show();
+                try {
+                    android.net.Uri uri = com.agy.util.AppFileProvider.getUriForFile(context, savedZip);
+                    Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                    sendIntent.setType("application/zip");
+                    sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Antigravity Projects Backup");
+                    sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                    sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Intent chooser = Intent.createChooser(sendIntent, "Backup Antigravity Projects");
+                    chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(chooser);
+                } catch (Exception ignored) {
+                }
+            } else {
+                Toast.makeText(context, "Could not write backup to storage", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(context, "Failed to backup projects: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private static boolean writeZip(File sourceDir, File zipFile) {
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new FileOutputStream(zipFile))) {
+            addDirToZip(sourceDir, "", zos);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void addDirToZip(File folder, String parentPath, java.util.zip.ZipOutputStream zos) throws java.io.IOException {
+        File[] files = folder.listFiles();
+        if (files == null) return;
+        for (File file : files) {
+            if (file.isDirectory()) {
+                addDirToZip(file, (parentPath.isEmpty() ? "" : parentPath + "/") + file.getName(), zos);
+            } else {
+                String entryName = (parentPath.isEmpty() ? "" : parentPath + "/") + file.getName();
+                zos.putNextEntry(new java.util.zip.ZipEntry(entryName));
+                try (FileInputStream in = new FileInputStream(file)) {
+                    byte[] buf = new byte[8192];
+                    int len;
+                    while ((len = in.read(buf)) > 0) {
+                        zos.write(buf, 0, len);
+                    }
+                }
+                zos.closeEntry();
+            }
+        }
+    }
 }

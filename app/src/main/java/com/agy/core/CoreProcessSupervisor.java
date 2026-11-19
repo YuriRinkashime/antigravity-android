@@ -80,6 +80,7 @@ public final class CoreProcessSupervisor {
             try {
                 CoreRuntimeState.lastError = null;
                 CoreRuntimeState.restarting = false;
+                CoreLogWriter.writeLine(log, "\n=== Antigravity Core Launch (attempt " + (attempt + 1) + ") ===");
                 Process proc = CoreLauncher.launch(runtime, appContext.getFilesDir());
                 process = proc;
 

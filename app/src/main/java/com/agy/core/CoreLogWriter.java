@@ -22,7 +22,16 @@ public final class CoreLogWriter {
         try {
             File dir = new File(filesDir, "logs");
             dir.mkdirs();
-            return new OutputStreamWriter(new FileOutputStream(new File(dir, "core.log"), false),
+            File logFile = new File(dir, "core.log");
+            // If log file exceeds 1.5MB, rotate it so it does not grow indefinitely
+            if (logFile.exists() && logFile.length() > 1_500_000) {
+                File oldLog = new File(dir, "core.log.old");
+                if (oldLog.exists()) {
+                    oldLog.delete();
+                }
+                logFile.renameTo(oldLog);
+            }
+            return new OutputStreamWriter(new FileOutputStream(logFile, true),
                     Charset.forName("UTF-8"));
         } catch (Exception e) {
             Log.w(TAG, "cannot open core log", e);

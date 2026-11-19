@@ -69,8 +69,8 @@ public final class CoreEnvironment {
         }
         godebugBuilder.append("netdns=go");
         if (!hasArmHardwareCrypto()) {
-            Log.w(TAG, "CPU lacks ARMv8 crypto extension (AES/PMULL); disabling Go hardware crypto acceleration");
-            godebugBuilder.append(",arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0");
+            Log.w(TAG, "CPU lacks ARMv8 crypto/atomics extension; disabling Go hardware crypto acceleration");
+            godebugBuilder.append(",cpu.all=off,cpu.aes=off,cpu.pmull=off,cpu.sha1=off,cpu.sha2=off,cpu.atomics=off,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0");
         }
         env.put("GODEBUG", godebugBuilder.toString());
         // Emits "ANTIGRAVITY_OPEN_URL: <url>" directly to stdout from language_server
@@ -98,9 +98,9 @@ public final class CoreEnvironment {
     private static Boolean sHasArmCrypto = null;
 
     /**
-     * Checks whether the current CPU supports ARMv8 Cryptography Extensions (AES & PMULL).
-     * On ARMv8.0 cores without hardware crypto (e.g. MediaTek Helio A22 / G25 / Cortex-A53),
-     * executing hardware crypto instructions raises SIGILL.
+     * Checks whether the current CPU supports ARMv8 Cryptography Extensions (AES & PMULL)
+     * and LSE atomics. On ARMv8.0 cores without hardware crypto (e.g. MediaTek Helio A22 / G25 /
+     * Cortex-A53), executing hardware crypto instructions raises SIGILL (exit code 132).
      */
     private static synchronized boolean hasArmHardwareCrypto() {
         if (sHasArmCrypto != null) {
@@ -111,11 +111,19 @@ public final class CoreEnvironment {
             sHasArmCrypto = true;
             return true;
         }
-        File cpuinfo = new File("/proc/cpuinfo");
-        if (!cpuinfo.isFile() || !cpuinfo.canRead()) {
-            sHasArmCrypto = true;
-            return true;
+
+        // 1. Direct SoC detection: MediaTek Helio A20/A22 (MT6761), G25/P22 (MT6762), G35/P35 (MT6765)
+        // are budget 4x/8x Cortex-A53 chipsets where ARMv8 Crypto Extension is physically omitted in silicon.
+        String hardware = android.os.Build.HARDWARE != null ? android.os.Build.HARDWARE.toLowerCase(java.util.Locale.US) : "";
+        String board = android.os.Build.BOARD != null ? android.os.Build.BOARD.toLowerCase(java.util.Locale.US) : "";
+        if (hardware.startsWith("mt676") || board.startsWith("mt676") || hardware.contains("mt6761") || hardware.contains("mt6762")) {
+            Log.i(TAG, "detected MediaTek Helio MT676x SoC (hardware=" + hardware + ", board=" + board + ") without crypto extension");
+            sHasArmCrypto = false;
+            return false;
         }
+
+        // 2. Hardware feature inspection via /proc/cpuinfo
+        File cpuinfo = new File("/proc/cpuinfo");
         try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(cpuinfo))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -124,9 +132,11 @@ public final class CoreEnvironment {
                     int colon = line.indexOf(':');
                     if (colon >= 0) {
                         String flags = line.substring(colon + 1);
-                        boolean hasAes = flags.matches(".*\\baes\\b.*");
-                        boolean hasPmull = flags.matches(".*\\bpmull\\b.*");
-                        sHasArmCrypto = hasAes && hasPmull;
+                        boolean hasAes = flags.contains("aes");
+                        boolean hasPmull = flags.contains("pmull");
+                        boolean hasAtomics = flags.contains("atomics");
+                        // Modern chips with hardware crypto and LSE have aes, pmull, and atomics
+                        sHasArmCrypto = hasAes && hasPmull && hasAtomics;
                         return sHasArmCrypto;
                     }
                 }
@@ -134,7 +144,8 @@ public final class CoreEnvironment {
         } catch (Throwable t) {
             Log.w(TAG, "could not read /proc/cpuinfo for crypto probe: " + t.getMessage());
         }
-        sHasArmCrypto = true;
-        return true;
+        // If unreadable or inconclusive on an ARM device, default to false (safe pure software crypto)
+        sHasArmCrypto = false;
+        return false;
     }
 }
