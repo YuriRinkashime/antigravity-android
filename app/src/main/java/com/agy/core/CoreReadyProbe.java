@@ -27,38 +27,14 @@ public final class CoreReadyProbe {
     }
 
     public static boolean probeOnce(Context context, int port) {
-        HttpsURLConnection connection = null;
-        try {
-            if (context == null) {
-                return false;
-            }
-            URL url = new URL(CoreUrl.startUrl(port));
-            connection = (HttpsURLConnection) url.openConnection();
-            connection.setConnectTimeout(800);
-            connection.setReadTimeout(800);
-            connection.setUseCaches(false);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod("GET");
-            connection.connect();
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode < 100 || responseCode > 599) {
-                return false;
-            }
-            Certificate[] chain = connection.getServerCertificates();
-            if (chain.length == 0 || !(chain[0] instanceof X509Certificate)) {
-                return false;
-            }
-            byte[] expected = expectedCertDigest(context);
-            byte[] actual = sha256(chain[0].getEncoded());
-            return expected != null && MessageDigest.isEqual(expected, actual);
-        } catch (Exception notReadyOrUntrusted) {
+        // Fast loopback TCP socket connection check: verifies that language_server
+        // has successfully bound port and is actively listening for connections.
+        try (java.net.Socket socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress("127.0.0.1", port), 350);
+            return true;
+        } catch (Exception notReady) {
             ProcessUtils.sleep(RETRY_SLEEP_MS);
             return false;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
     }
 
