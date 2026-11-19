@@ -36,6 +36,14 @@ def patch_main(file_path):
         print("[web-patch] Patched voice AbortError message")
         modified = True
 
+    # Use Blob URL fallback for AudioWorklet addModule
+    target_worklet = 'G(await E(I.audioWorklet.addModule("data:application/javascript;base64,"+btoa(W1a))))'
+    replacement_worklet = 'G(await E(I.audioWorklet.addModule(window.URL&&window.Blob?URL.createObjectURL(new Blob([W1a],{type:"application/javascript"})):"data:application/javascript;base64,"+btoa(W1a))))'
+    if target_worklet in content:
+        content = content.replace(target_worklet, replacement_worklet)
+        print("[web-patch] Patched audioWorklet addModule to use Blob URL fallback")
+        modified = True
+
     if "Desktop Mode" in content or "ag_desktop_mode" in content:
         print("[web-patch] Desktop Mode toggle already present in main.js")
         if modified:

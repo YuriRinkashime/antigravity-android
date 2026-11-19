@@ -31,8 +31,9 @@ public final class CoreEnvironment {
         String inheritedPath = env.get("PATH");
 
         // The core's PTY spawner uses $SHELL (or falls back to /bin/bash, which
-        // does not exist on Android). Prefer the prefix bash, then the bridge in
-        // runtime/bin, then Android's own sh.
+        // does not exist on Android). Prefer the bridge wrapper in runtime/bin
+        // which configures LD_LIBRARY_PATH, PATH, and unsets LD_PRELOAD before
+        // execing the bionic bash binary.
         File prefix = new File(files, com.agy.install.EnvPaths.PREFIX_DIR);
         File prefixBash = new File(prefix, com.agy.install.EnvPaths.BASH_REL);
         File runtimeBash = new File(bin, "bash");
@@ -43,10 +44,10 @@ public final class CoreEnvironment {
             finalPath += ":" + inheritedPath;
         }
         env.put("PATH", finalPath);
-        if (prefixBash.isFile() && prefixBash.canExecute()) {
-            env.put("SHELL", prefixBash.getAbsolutePath());
-        } else if (runtimeBash.isFile() && runtimeBash.canExecute()) {
+        if (runtimeBash.isFile() && runtimeBash.canExecute()) {
             env.put("SHELL", runtimeBash.getAbsolutePath());
+        } else if (prefixBash.isFile() && prefixBash.canExecute()) {
+            env.put("SHELL", prefixBash.getAbsolutePath());
         } else {
             env.put("SHELL", "/system/bin/sh");
         }
