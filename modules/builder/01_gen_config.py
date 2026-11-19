@@ -44,7 +44,7 @@ def main():
     gw_port = env.get("GATEWAY_PORT_DEV", "45161") if is_dev else env.get("GATEWAY_PORT", "45160")
     core_version = env.get("CORE_VERSION", "2.33.0")
     app_version_name = env.get("APP_VERSION_NAME", "2.33.0")
-    app_version_code = env.get("APP_VERSION_CODE", "2330")
+    app_version_code = env.get("APP_VERSION_CODE", "2331")
     oauth_scheme = env.get("OAUTH_SCHEME", "antigravity")
     app_name = env.get("APP_NAME_DEV", "Antigravity Dev") if is_dev else env.get("APP_NAME", "Antigravity")
     min_api = env.get("MIN_API", "24")

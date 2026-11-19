@@ -70,7 +70,7 @@ public final class CoreEnvironment {
         godebugBuilder.append("netdns=go");
         if (!hasArmHardwareCrypto()) {
             Log.w(TAG, "CPU lacks ARMv8 crypto/atomics extension; disabling Go hardware crypto acceleration");
-            godebugBuilder.append(",cpu.all=off,cpu.aes=off,cpu.pmull=off,cpu.sha1=off,cpu.sha2=off,cpu.atomics=off,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0");
+            godebugBuilder.append(",arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off");
         }
 
         env.put("GODEBUG", godebugBuilder.toString());
