@@ -378,6 +378,32 @@ function installMediaPolyfills() {
 installFetchRewrite();
 installMediaPolyfills();
 
+function installResumeHandler() {
+  try {
+    if (global.__AG_RESUME_HANDLER__) return;
+    global.__AG_RESUME_HANDLER__ = true;
+    global.addEventListener('agy:host-resume', function () {
+      try {
+        global.dispatchEvent(new Event('focus'));
+        global.dispatchEvent(new Event('online'));
+        if (typeof document !== 'undefined') {
+          document.dispatchEvent(new Event('visibilitychange'));
+        }
+      } catch (err) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[AGY] host-resume dispatch error', err);
+        }
+      }
+    });
+  } catch (e) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[AGY] resume handler install error', e);
+    }
+  }
+}
+
+installResumeHandler();
+
 /**
  * core/public-api.js - expose window.__agBridgeCore.
  *

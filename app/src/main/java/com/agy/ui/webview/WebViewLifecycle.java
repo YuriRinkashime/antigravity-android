@@ -20,21 +20,29 @@ public final class WebViewLifecycle {
             webView.onResume();
             webView.resumeTimers();
             webView.evaluateJavascript(
-                    "(function(){ try { window.dispatchEvent(new CustomEvent('agy:host-resume')); } catch(e){} })();",
+                    "(function(){ try { "
+                            + "window.dispatchEvent(new CustomEvent('agy:host-resume')); "
+                            + "window.dispatchEvent(new Event('focus')); "
+                            + "window.dispatchEvent(new Event('online')); "
+                            + "if (typeof document !== 'undefined') { document.dispatchEvent(new Event('visibilitychange')); } "
+                            + "} catch(e){} })();",
                     null);
         } catch (Exception e) {
             Log.w(TAG, "failed to resume webView", e);
         }
     }
 
-    /** Pauses page callbacks and timers while the host activity is not visible. */
+    /**
+     * Pauses page callbacks while the host activity is not visible.
+     * Note: pauseTimers() is intentionally omitted so active agent event streams
+     * and background UI sync continue processing without net::ERR_FAILED disconnects.
+     */
     public static void pause(WebView webView) {
         if (webView == null) {
             return;
         }
         try {
             webView.onPause();
-            webView.pauseTimers();
         } catch (Exception e) {
             Log.w(TAG, "failed to pause webView", e);
         }

@@ -59,6 +59,10 @@ public final class ShellBridgeInstaller {
         if (!sh.isFile()) {
             writeScript(sh, "#!/system/bin/sh\n# AGY fallback shell\nexec /system/bin/sh \"$@\"\n");
         }
+        File node = new File(bin, "node");
+        if (!node.isFile()) {
+            writeScript(node, "#!/system/bin/sh\n# AGY fallback node shim\necho \"node: not installed in this environment\" >&2\nexit 127\n");
+        }
         writeTorchShims(bin, context);
     }
 
