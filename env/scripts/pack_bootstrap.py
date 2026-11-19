@@ -220,6 +220,27 @@ def pack_bootstrap(zip_path, out_tar_gz, trim=True, extra_debs=None):
             for deb in extra_debs:
                 extract_deb_into_bootstrap(deb, dest, trim, new_sl_lines)
 
+        # Patch bin/bash hardcoded termux profile paths
+        bash_bin = os.path.join(dest, "bin", "bash")
+        if os.path.isfile(bash_bin):
+            with open(bash_bin, "rb") as f:
+                bdata = bytearray(f.read())
+            t1 = b"/data/data/com.termux/files/usr/etc/profile\0"
+            r1 = b"/etc/profile\0" + b"\0" * (len(t1) - len(b"/etc/profile\0"))
+            t2 = b"/data/data/com.termux/files/usr/etc/bash.bashrc\0"
+            r2 = b"/etc/bash.bashrc\0" + b"\0" * (len(t2) - len(b"/etc/bash.bashrc\0"))
+            p1 = bdata.find(t1)
+            p2 = bdata.find(t2)
+            if p1 != -1 or p2 != -1:
+                if p1 != -1:
+                    bdata[p1:p1+len(t1)] = r1
+                if p2 != -1:
+                    bdata[p2:p2+len(t2)] = r2
+                with open(bash_bin, "wb") as f:
+                    f.write(bdata)
+                os.chmod(bash_bin, 0o755)
+                print(f"[pack_bootstrap] Patched hardcoded profile paths in {bash_bin}")
+
         # Write clean SYMLINKS.txt
         sl_out_path = os.path.join(dest, "SYMLINKS.txt")
         with open(sl_out_path, "w", encoding="utf-8") as f:

@@ -46,6 +46,33 @@ public final class OnboardingSeeder {
             if (!outside.isFile()) {
                 AtomicFileWriter.writeText(outside, "{}\n");
             }
+
+            // Seed ~/.profile and ~/.bashrc into $HOME (getFilesDir()) if missing or empty
+            File homeDir = appContext.getFilesDir();
+            File profile = new File(homeDir, ".profile");
+            if (!profile.isFile() || profile.length() == 0) {
+                String profileContent = "# Antigravity Shell Profile\n"
+                        + "if [ -n \"$PREFIX\" ] && [ -f \"$PREFIX/etc/profile\" ]; then\n"
+                        + "    . \"$PREFIX/etc/profile\"\n"
+                        + "elif [ -f \"$HOME/usr/etc/profile\" ]; then\n"
+                        + "    . \"$HOME/usr/etc/profile\"\n"
+                        + "fi\n"
+                        + "if [ -f \"$HOME/.bashrc\" ]; then\n"
+                        + "    . \"$HOME/.bashrc\"\n"
+                        + "fi\n";
+                AtomicFileWriter.writeText(profile, profileContent);
+            }
+
+            File bashrc = new File(homeDir, ".bashrc");
+            if (!bashrc.isFile() || bashrc.length() == 0) {
+                String bashrcContent = "# Antigravity Interactive Bash Config\n"
+                        + "if [ -n \"$PREFIX\" ] && [ -f \"$PREFIX/etc/bash.bashrc\" ]; then\n"
+                        + "    . \"$PREFIX/etc/bash.bashrc\"\n"
+                        + "elif [ -f \"$HOME/usr/etc/bash.bashrc\" ]; then\n"
+                        + "    . \"$HOME/usr/etc/bash.bashrc\"\n"
+                        + "fi\n";
+                AtomicFileWriter.writeText(bashrc, bashrcContent);
+            }
         } catch (Exception e) {
             Log.w(TAG, "onboarding seed failed (continuing): " + e.getMessage());
         }

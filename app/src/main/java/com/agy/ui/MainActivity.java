@@ -52,6 +52,7 @@ public class MainActivity extends Activity
     private static final String TAG = "MainActivity";
     private static final int REQUEST_STORAGE = 100;
     private static final int REQUEST_FILE_CHOOSER = 1002;
+    private static final int REQUEST_MEDIA_PERMISSIONS = 1003;
     private static final long SPLASH_TIMEOUT_MS = 60000;
     private static final long POLL_STARTUP_INTERVAL_MS = 50;
     private static final long POLL_READY_INTERVAL_MS = 1000;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity
     public static volatile MainActivity activeActivity;
 
     private ValueCallback<Uri[]> filePathCallback;
+    private android.webkit.PermissionRequest pendingPermissionRequest;
 
     private ThemeManager themeManager;
     private OAuthManager oauthManager;
@@ -253,6 +255,12 @@ public class MainActivity extends Activity
                     Log.w(TAG, "error destroying webView", e);
                 }
             }
+        }
+        if (pendingPermissionRequest != null) {
+            try {
+                pendingPermissionRequest.deny();
+            } catch (Throwable ignored) {}
+            pendingPermissionRequest = null;
         }
         super.onDestroy();
     }
@@ -509,9 +517,66 @@ public class MainActivity extends Activity
         }
     }
 
+    public void requestMediaPermissions(android.webkit.PermissionRequest request, List<String> permissions) {
+        if (this.pendingPermissionRequest != null && this.pendingPermissionRequest != request) {
+            try {
+                this.pendingPermissionRequest.deny();
+            } catch (Throwable ignored) {}
+        }
+        this.pendingPermissionRequest = request;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && permissions != null && !permissions.isEmpty()) {
+            requestPermissions(permissions.toArray(new String[0]), REQUEST_MEDIA_PERMISSIONS);
+        } else {
+            if (request != null) {
+                try {
+                    request.grant(request.getResources());
+                } catch (Throwable t) {
+                    Log.w(TAG, "Failed granting media permissions: " + t.getMessage());
+                }
+            }
+            this.pendingPermissionRequest = null;
+        }
+    }
+
+    public void onMediaPermissionCanceled(android.webkit.PermissionRequest request) {
+        if (this.pendingPermissionRequest != null && this.pendingPermissionRequest == request) {
+            this.pendingPermissionRequest = null;
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_MEDIA_PERMISSIONS) {
+            if (pendingPermissionRequest != null) {
+                boolean allGranted = true;
+                if (grantResults != null && grantResults.length > 0) {
+                    for (int res : grantResults) {
+                        if (res != PackageManager.PERMISSION_GRANTED) {
+                            allGranted = false;
+                            break;
+                        }
+                    }
+                } else {
+                    allGranted = false;
+                }
+                if (allGranted) {
+                    try {
+                        pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
+                    } catch (Throwable t) {
+                        Log.w(TAG, "Failed granting media permissions: " + t.getMessage());
+                    }
+                } else {
+                    try {
+                        pendingPermissionRequest.deny();
+                    } catch (Throwable t) {
+                        Log.w(TAG, "Failed denying media permissions: " + t.getMessage());
+                    }
+                }
+                pendingPermissionRequest = null;
+            }
+            return;
+        }
         if (requestCode == com.agy.ui.download.FileDownloader.REQUEST_STORAGE_DOWNLOAD) {
             WebView wv = (webViewHost != null) ? webViewHost.getWebView() : null;
             com.agy.ui.download.FileDownloader.onPermissionResult(this, wv, requestCode, grantResults);

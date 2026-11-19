@@ -29,14 +29,20 @@ public final class CoreEnvironment {
                 + " TMPDIR=" + rm.appContext().getCacheDir().getAbsolutePath());
         env.put("SSL_CERT_FILE", rm.getCertFile().getAbsolutePath());
         String inheritedPath = env.get("PATH");
-        env.put("PATH", bin.getAbsolutePath()
-                + (inheritedPath == null || inheritedPath.isEmpty() ? "" : ":" + inheritedPath));
+
         // The core's PTY spawner uses $SHELL (or falls back to /bin/bash, which
         // does not exist on Android). Prefer the prefix bash, then the bridge in
         // runtime/bin, then Android's own sh.
         File prefix = new File(files, com.agy.install.EnvPaths.PREFIX_DIR);
         File prefixBash = new File(prefix, com.agy.install.EnvPaths.BASH_REL);
         File runtimeBash = new File(bin, "bash");
+        env.put("PREFIX", prefix.getAbsolutePath());
+        File prefixBin = new File(prefix, "bin");
+        String finalPath = bin.getAbsolutePath() + ":" + prefixBin.getAbsolutePath();
+        if (inheritedPath != null && !inheritedPath.isEmpty()) {
+            finalPath += ":" + inheritedPath;
+        }
+        env.put("PATH", finalPath);
         if (prefixBash.isFile() && prefixBash.canExecute()) {
             env.put("SHELL", prefixBash.getAbsolutePath());
         } else if (runtimeBash.isFile() && runtimeBash.canExecute()) {
