@@ -72,6 +72,29 @@ public final class CoreEnvironment {
             Log.w(TAG, "CPU lacks ARMv8 crypto/atomics extension; disabling Go hardware crypto acceleration");
             godebugBuilder.append(",cpu.all=off,cpu.aes=off,cpu.pmull=off,cpu.sha1=off,cpu.sha2=off,cpu.atomics=off,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0");
         }
+
+        // Dynamic memory constraints for low-RAM devices (<= 3GB RAM) to prevent
+        // Android's Low Memory Killer Daemon (lmkd) from terminating language_server with SIGKILL (137).
+        // High-end devices (> 3GB RAM) remain completely unconstrained at maximum performance.
+        try {
+            android.app.ActivityManager am = (android.app.ActivityManager) rm.appContext().getSystemService(android.content.Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+                am.getMemoryInfo(mi);
+                long totalRamMb = mi.totalMem / (1024 * 1024);
+                if (am.isLowRamDevice() || totalRamMb <= 3072) {
+                    Log.i(TAG, "low-RAM device detected (" + totalRamMb + "MB); applying proactive Go memory caps for lmkd stability");
+                    env.put("GOMEMLIMIT", "288MiB");
+                    env.put("GOGC", "40");
+                    godebugBuilder.append(",madvdontneed=1");
+                } else {
+                    Log.i(TAG, "device RAM " + totalRamMb + "MB > 3GB; running unconstrained full-speed Go runtime");
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "failed to query ActivityManager memory info: " + e.getMessage());
+        }
+
         env.put("GODEBUG", godebugBuilder.toString());
         // Emits "ANTIGRAVITY_OPEN_URL: <url>" directly to stdout from language_server
         // so OpenUrlWatcher captures the auth URL and opens the external browser reliably.

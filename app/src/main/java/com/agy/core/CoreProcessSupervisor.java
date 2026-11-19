@@ -142,11 +142,12 @@ public final class CoreProcessSupervisor {
                 }
                 CoreRuntimeState.serverUrl = null;
                 attempt++;
+                String exitDesc = describeExitCode(code);
                 String tail = getLastLinesFromLog(appContext.getFilesDir(), 15);
                 if (attempt > CoreRestartPolicy.MAX_RESTARTS) {
                     CoreRuntimeState.restarting = false;
                     CoreRuntimeState.lastError = "core crashed " + CoreRestartPolicy.MAX_RESTARTS
-                            + " times; giving up (last exit code " + code + ")"
+                            + " times; giving up (last exit code " + code + exitDesc + ")"
                             + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
                     CoreLogWriter.writeLine(log, CoreRuntimeState.lastError);
                     com.agy.log.CrashRecorder.recordCrash(appContext, code, System.currentTimeMillis() - readyAt, CoreRuntimeState.lastError, logBuffer);
@@ -154,7 +155,7 @@ public final class CoreProcessSupervisor {
                 }
                 long delay = CoreRestartPolicy.delayFor(attempt);
                 CoreRuntimeState.restarting = true;
-                CoreRuntimeState.lastError = "core exited unexpectedly (code " + code
+                CoreRuntimeState.lastError = "core exited unexpectedly (code " + code + exitDesc
                         + "); restarting in " + (delay / 1000) + "s (attempt "
                         + attempt + "/" + CoreRestartPolicy.MAX_RESTARTS + ")"
                         + (tail.isEmpty() ? "" : "\n--- core.log tail ---\n" + tail);
@@ -270,5 +271,22 @@ public final class CoreProcessSupervisor {
         } catch (Exception ignored) {
         }
         return TextUtils.join("\n", lines);
+    }
+
+    private static String describeExitCode(int code) {
+        switch (code) {
+            case 137:
+                return " [SIGKILL / system Out-Of-Memory LMK]";
+            case 139:
+                return " [SIGSEGV / segmentation fault]";
+            case 134:
+                return " [SIGABRT / abort]";
+            case 132:
+                return " [SIGILL / illegal instruction]";
+            case 143:
+                return " [SIGTERM / terminated]";
+            default:
+                return "";
+        }
     }
 }
