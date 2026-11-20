@@ -293,6 +293,25 @@ public final class CoreProcessSupervisor {
         }
     }
 
+    private static String getStderrLogTail(java.io.File filesDir, int maxLines) {
+        java.io.File errFile = new java.io.File(filesDir, "logs/core_stderr.log");
+        if (!errFile.isFile() || errFile.length() == 0) {
+            return "";
+        }
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new java.io.FileReader(errFile))) {
+            String l;
+            while ((l = br.readLine()) != null) {
+                lines.add(SensitiveDataRedactor.redactLine(l));
+                if (lines.size() > maxLines) {
+                    lines.remove(0);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return TextUtils.join("\n", lines);
+    }
+
     private static String describeExitCode(int code, java.io.File filesDir) {
         String base;
         switch (code) {
@@ -310,6 +329,10 @@ public final class CoreProcessSupervisor {
                 String sigill = getSigillLogTail(filesDir);
                 if (!sigill.isEmpty()) {
                     base += " - " + sigill;
+                }
+                String stderrTail = getStderrLogTail(filesDir, 10);
+                if (!stderrTail.isEmpty()) {
+                    base += " | stderr: " + stderrTail;
                 }
                 break;
             case 143:

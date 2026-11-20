@@ -104,7 +104,7 @@ export LANG="C.UTF-8"
 export LC_ALL="C.UTF-8"
 export GODEBUG="netdns=go"
 if [ -f /proc/cpuinfo ] && (! grep -qi "aes" /proc/cpuinfo || ! grep -qi "atomics" /proc/cpuinfo); then
-    export GODEBUG="$GODEBUG,cpu.all=off,cpu.aes=off,cpu.pmull=off,cpu.sha1=off,cpu.sha2=off,cpu.atomics=off,arm64.aes=0,arm64.pmull=0,arm64.sha1=0,arm64.sha2=0"
+    export GODEBUG="$GODEBUG,cpu.all=off,arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off"
 fi
 export ANTIGRAVITY_VSCODE_HOST="1"
 export BROWSER="$RT/bin/xdg-open"

@@ -70,7 +70,7 @@ public final class CoreEnvironment {
         godebugBuilder.append("netdns=go");
         if (!hasArmHardwareCrypto()) {
             Log.w(TAG, "CPU lacks ARMv8 crypto/atomics extension; disabling Go hardware crypto acceleration");
-            godebugBuilder.append(",arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off");
+            godebugBuilder.append(",cpu.all=off,arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off");
         }
 
         env.put("GODEBUG", godebugBuilder.toString());
@@ -111,6 +111,16 @@ public final class CoreEnvironment {
         if (!arch.contains("aarch64") && !arch.contains("arm64") && !arch.contains("arm")) {
             sHasArmCrypto = true;
             return true;
+        }
+
+        // 0. ABI check: 32-bit userspace / devices (armeabi-v7a) lack 64-bit ARMv8 crypto/atomics
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            String[] abis64 = android.os.Build.SUPPORTED_64_BIT_ABIS;
+            if (abis64 == null || abis64.length == 0) {
+                Log.i(TAG, "device reports no 64-bit ABIs; disabling hardware acceleration");
+                sHasArmCrypto = false;
+                return false;
+            }
         }
 
         // 1. Direct SoC detection: MediaTek Helio A20/A22 (MT6761), G25/P22 (MT6762), G35/P35 (MT6765)

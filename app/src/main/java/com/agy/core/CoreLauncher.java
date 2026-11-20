@@ -80,7 +80,14 @@ public final class CoreLauncher {
         }, 3500);
         ProcessBuilder pb = new ProcessBuilder(runtime.coreCommand());
         pb.directory(filesDir);
-        pb.redirectErrorStream(true);
+        File logsDir = new File(filesDir, "logs");
+        logsDir.mkdirs();
+        File stderrLog = new File(logsDir, "core_stderr.log");
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            pb.redirectError(ProcessBuilder.Redirect.appendTo(stderrLog));
+        } else {
+            pb.redirectErrorStream(true);
+        }
         runtime.applyEnvironment(pb);
         return pb.start();
     }
