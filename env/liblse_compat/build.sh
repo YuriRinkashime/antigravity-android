@@ -7,4 +7,5 @@ CC="${CC:-clang}"
 CFLAGS="${CFLAGS:--march=armv8-a -moutline-atomics -O2 -Wall -fPIC -shared}"
 
 "$CC" $CFLAGS "$DIR/liblse_compat.c" -o "$DIR/liblse_compat.so"
-echo "Built: $DIR/liblse_compat.so"
+cp -f "$DIR/liblse_compat.so" "$DIR/../../modules/core/glibc/liblse_compat.so"
+echo "Built: $DIR/liblse_compat.so and synced to modules/core/glibc/liblse_compat.so"

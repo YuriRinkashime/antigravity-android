@@ -284,6 +284,9 @@ public final class CoreProcessSupervisor {
     private static String getSigillLogTail(java.io.File filesDir) {
         java.io.File sigillFile = new java.io.File(filesDir, "logs/sigill.log");
         if (!sigillFile.isFile() || sigillFile.length() == 0) {
+            sigillFile = new java.io.File(filesDir, "sigill.log");
+        }
+        if (!sigillFile.isFile() || sigillFile.length() == 0) {
             return "";
         }
         try {
@@ -330,7 +333,7 @@ public final class CoreProcessSupervisor {
                 if (!sigill.isEmpty()) {
                     base += " - " + sigill;
                 }
-                String stderrTail = getStderrLogTail(filesDir, 10);
+                String stderrTail = getStderrLogTail(filesDir, 50);
                 if (!stderrTail.isEmpty()) {
                     base += " | stderr: " + stderrTail;
                 }

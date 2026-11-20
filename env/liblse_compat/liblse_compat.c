@@ -284,44 +284,166 @@ static bool emulate_lse(ucontext_t *uc, uint32_t insn) {
 
         uintptr_t addr = (uintptr_t)get_reg(uc, rn, true);
         unsigned bit30 = (insn >> 30) & 1;
+        bool is_acquire = ((insn >> 15) & 1) != 0;
+        bool is_release = ((insn >> 22) & 1) != 0;
 
         if (bit30 == 0) {
-            uint64_t compare_val = (get_reg(uc, rs + 1, false) << 32) | (get_reg(uc, rs, false) & 0xFFFFFFFFULL);
-            uint64_t new_val = (get_reg(uc, rt + 1, false) << 32) | (get_reg(uc, rt, false) & 0xFFFFFFFFULL);
-            uint64_t old_val = 0;
-            EMULATE_CAS(uint64_t, addr, compare_val, new_val, &old_val);
-            set_reg(uc, rs, old_val & 0xFFFFFFFFULL, 2);
-            set_reg(uc, rs + 1, (old_val >> 32) & 0xFFFFFFFFULL, 2);
+            uint32_t cmp_lo = (uint32_t)get_reg(uc, rs, false);
+            uint32_t cmp_hi = (uint32_t)get_reg(uc, rs + 1, false);
+            uint32_t new_lo = (uint32_t)get_reg(uc, rt, false);
+            uint32_t new_hi = (uint32_t)get_reg(uc, rt + 1, false);
+            uint32_t old_lo = 0, old_hi = 0;
+            uint32_t res = 0;
+
+            if (is_acquire && is_release) {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldaxp %w0, %w1, [%4]\n"
+                    "cmp %w0, %w5\n"
+                    "ccmp %w1, %w6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stlxp %w2, %w7, %w8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(uint64_t *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            } else if (is_acquire) {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldaxp %w0, %w1, [%4]\n"
+                    "cmp %w0, %w5\n"
+                    "ccmp %w1, %w6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stxp %w2, %w7, %w8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(uint64_t *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            } else if (is_release) {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldxp %w0, %w1, [%4]\n"
+                    "cmp %w0, %w5\n"
+                    "ccmp %w1, %w6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stlxp %w2, %w7, %w8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(uint64_t *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            } else {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldxp %w0, %w1, [%4]\n"
+                    "cmp %w0, %w5\n"
+                    "ccmp %w1, %w6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stxp %w2, %w7, %w8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(uint64_t *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            }
+            set_reg(uc, rs, (uint64_t)old_lo, 2);
+            set_reg(uc, rs + 1, (uint64_t)old_hi, 2);
             return true;
         } else {
-            unsigned __int128 *p = (unsigned __int128 *)addr;
             uint64_t cmp_lo = get_reg(uc, rs, false);
             uint64_t cmp_hi = get_reg(uc, rs + 1, false);
             uint64_t new_lo = get_reg(uc, rt, false);
             uint64_t new_hi = get_reg(uc, rt + 1, false);
-            uint64_t old_lo, old_hi;
-            uint32_t res;
+            uint64_t old_lo = 0, old_hi = 0;
+            uint32_t res = 0;
 
-            do {
+            if (is_acquire && is_release) {
                 __asm__ volatile (
-                    "ldxp %0, %1, [%3]\n"
-                    : "=&r"(old_lo), "=&r"(old_hi)
-                    : "m"(*p), "r"(p)
-                    : "memory"
+                    "1:\n"
+                    "ldaxp %0, %1, [%4]\n"
+                    "cmp %0, %5\n"
+                    "ccmp %1, %6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stlxp %w2, %7, %8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(unsigned __int128 *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
                 );
-                if (old_lo != cmp_lo || old_hi != cmp_hi) {
-                    set_reg(uc, rs, old_lo, 3);
-                    set_reg(uc, rs + 1, old_hi, 3);
-                    return true;
-                }
+            } else if (is_acquire) {
                 __asm__ volatile (
-                    "stxp %w0, %2, %3, [%4]\n"
-                    : "=&r"(res)
-                    : "m"(*p), "r"(new_lo), "r"(new_hi), "r"(p)
-                    : "memory"
+                    "1:\n"
+                    "ldaxp %0, %1, [%4]\n"
+                    "cmp %0, %5\n"
+                    "ccmp %1, %6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stxp %w2, %7, %8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(unsigned __int128 *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
                 );
-            } while (__builtin_expect(res != 0, 0));
-
+            } else if (is_release) {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldxp %0, %1, [%4]\n"
+                    "cmp %0, %5\n"
+                    "ccmp %1, %6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stlxp %w2, %7, %8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(unsigned __int128 *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            } else {
+                __asm__ volatile (
+                    "1:\n"
+                    "ldxp %0, %1, [%4]\n"
+                    "cmp %0, %5\n"
+                    "ccmp %1, %6, #0, eq\n"
+                    "b.ne 2f\n"
+                    "stxp %w2, %7, %8, [%4]\n"
+                    "cbnz %w2, 1b\n"
+                    "b 3f\n"
+                    "2:\n"
+                    "clrex\n"
+                    "3:\n"
+                    : "=&r"(old_lo), "=&r"(old_hi), "=&r"(res), "+m"(*(unsigned __int128 *)addr)
+                    : "r"(addr), "r"(cmp_lo), "r"(cmp_hi), "r"(new_lo), "r"(new_hi)
+                    : "cc", "memory"
+                );
+            }
             set_reg(uc, rs, old_lo, 3);
             set_reg(uc, rs + 1, old_hi, 3);
             return true;
@@ -824,12 +946,54 @@ static bool emulate_crc32(ucontext_t *uc, uint32_t insn) {
     return false;
 }
 
-static void direct_sigill_log(uintptr_t pc, uint32_t insn) {
+static void direct_sigill_log(uintptr_t pc, uint32_t insn, uintptr_t fault_addr) {
     const char *paths[] = {
+        "/data/data/com.agy/files/logs/sigill.log",
         "/data/user/0/com.agy/files/logs/sigill.log",
+        "/data/data/com.agy/files/sigill.log",
+        "/data/user/0/com.agy/files/sigill.log",
+        "/data/data/com.agy.dev/files/logs/sigill.log",
         "/data/user/0/com.agy.dev/files/logs/sigill.log"
     };
-    for (int p = 0; p < 2; p++) {
+
+    char buf[256];
+    int pos = 0;
+    const char *hdr = "[lse_compat] FATAL: unhandled SIGILL at PC=0x";
+    while (hdr[pos]) { buf[pos] = hdr[pos]; pos++; }
+    for (int i = 15; i >= 0; i--) {
+        int nib = (int)((pc >> (i * 4)) & 0xF);
+        buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+    }
+    const char *mid1 = " INSN=0x";
+    int mpos1 = 0;
+    while (mid1[mpos1]) { buf[pos++] = mid1[mpos1++]; }
+    for (int i = 7; i >= 0; i--) {
+        int nib = (int)((insn >> (i * 4)) & 0xF);
+        buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+    }
+    const char *mid2 = " FAULT_ADDR=0x";
+    int mpos2 = 0;
+    while (mid2[mpos2]) { buf[pos++] = mid2[mpos2++]; }
+    for (int i = 15; i >= 0; i--) {
+        int nib = (int)((fault_addr >> (i * 4)) & 0xF);
+        buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+    }
+    buf[pos++] = '\n';
+
+    // Direct output to both stderr (2) and stdout (1) via raw Linux syscalls
+    register long s0 __asm__("x0") = 2; // stderr
+    register long s1 __asm__("x1") = (long)buf;
+    register long s2 __asm__("x2") = pos;
+    register long s8 __asm__("x8") = 64; // __NR_write
+    __asm__ volatile("svc #0" : "+r"(s0) : "r"(s1), "r"(s2), "r"(s8) : "memory");
+
+    register long o0 __asm__("x0") = 1; // stdout
+    register long o1 __asm__("x1") = (long)buf;
+    register long o2 __asm__("x2") = pos;
+    register long o8 __asm__("x8") = 64; // __NR_write
+    __asm__ volatile("svc #0" : "+r"(o0) : "r"(o1), "r"(o2), "r"(o8) : "memory");
+
+    for (int p = 0; p < 6; p++) {
         register long x0 __asm__("x0") = -100; // AT_FDCWD
         register long x1 __asm__("x1") = (long)paths[p];
         register long x2 __asm__("x2") = 0x441; // O_WRONLY | O_CREAT | O_APPEND
@@ -838,23 +1002,6 @@ static void direct_sigill_log(uintptr_t pc, uint32_t insn) {
         __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "memory");
         int fd = (int)x0;
         if (fd >= 0) {
-            char buf[128];
-            int pos = 0;
-            const char *hdr = "[lse_compat] FATAL: unhandled SIGILL at PC=0x";
-            while (hdr[pos]) { buf[pos] = hdr[pos]; pos++; }
-            for (int i = 15; i >= 0; i--) {
-                int nib = (int)((pc >> (i * 4)) & 0xF);
-                buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
-            }
-            const char *mid = " INSN=0x";
-            int mpos = 0;
-            while (mid[mpos]) { buf[pos++] = mid[mpos++]; }
-            for (int i = 7; i >= 0; i--) {
-                int nib = (int)((insn >> (i * 4)) & 0xF);
-                buf[pos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
-            }
-            buf[pos++] = '\n';
-
             register long w0 __asm__("x0") = fd;
             register long w1 __asm__("x1") = (long)buf;
             register long w2 __asm__("x2") = pos;
@@ -880,13 +1027,8 @@ static void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
         return;
     }
 
-    direct_sigill_log((uintptr_t)pc, insn);
-
-    log_raw("[lse_compat] FATAL: unhandled SIGILL at PC=");
-    log_hex((uint64_t)pc);
-    log_raw(" INSN=");
-    log_hex((uint64_t)insn);
-    log_raw("\n");
+    uintptr_t fault_addr = info ? (uintptr_t)info->si_addr : 0;
+    direct_sigill_log((uintptr_t)pc, insn, fault_addr);
 
     // Pass-through to original handler if not an LSE instruction
     if (old_sigill_act.sa_flags & SA_SIGINFO) {
@@ -937,7 +1079,7 @@ __attribute__((constructor(101))) static void init_lse_compat(void) {
     struct kernel_sigaction ksa;
     memset(&ksa, 0, sizeof(ksa));
     ksa.k_handler = sigill_handler;
-    ksa.sa_flags = SA_SIGINFO | SA_NODEFER;
+    ksa.sa_flags = SA_SIGINFO | SA_NODEFER | SA_ONSTACK;
     ksa.sa_restorer = NULL;
     ksa.sa_mask = 0;
 
