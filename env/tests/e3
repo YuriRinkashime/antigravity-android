@@ -23,15 +23,15 @@ rm -f "$PREFIX/etc/profile.d/01-termux-bootstrap-second-stage-fallback.sh" \
 mkdir -p "$PREFIX/libexec"
 cp -a "$ENV_DIR/pkg/." "$PREFIX/libexec/pkg/"
 
+# --- rewrite termux shebangs, then load environment -------------------------
+PKG_LIB="$ENV_DIR/pkg/lib" bash -c '. "$PKG_LIB/util.sh"; rewrite_prefix "$PREFIX/bin" "$PREFIX/libexec"'
+
 # wrapper that points straight at our own shell (no shim needed)
 cat > "$PREFIX/bin/pkg" <<EOF
 #!$PREFIX/bin/bash
 exec "$PREFIX/libexec/pkg/pkg" "\$@"
 EOF
 chmod +x "$PREFIX/bin/pkg" "$PREFIX/libexec/pkg/pkg"
-
-# --- rewrite termux shebangs, then load environment -------------------------
-PKG_LIB="$ENV_DIR/pkg/lib" bash -c '. "$PKG_LIB/util.sh"; rewrite_prefix "$PREFIX/bin" "$PREFIX/libexec"'
 . "$PREFIX/etc/profile"
 
 # --- checks -----------------------------------------------------------------

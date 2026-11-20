@@ -28,10 +28,28 @@ public final class EnvInstaller {
         return EnvPaths.prefix(context);
     }
 
+    public static boolean is32BitUserspace() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            String[] abis64 = android.os.Build.SUPPORTED_64_BIT_ABIS;
+            if (abis64 == null || abis64.length == 0) {
+                return true;
+            }
+        }
+        return !new File("/system/bin/linker64").exists();
+    }
+
     public static boolean isInstalled(Context context) {
         File prefix = prefix(context);
-        return new File(prefix, EnvPaths.MARKER).isFile()
+        boolean basic = new File(prefix, EnvPaths.MARKER).isFile()
                 && new File(prefix, EnvPaths.BASH_REL).isFile();
+        if (!basic) {
+            return false;
+        }
+        if (is32BitUserspace() && !bashSmokeTest(context, prefix)) {
+            Log.w(TAG, "installed prefix bash failed smoke test on 32-bit userspace; forcing reinstall with ARM bootstrap");
+            return false;
+        }
+        return true;
     }
 
     /** @return true when the prefix was built in this call. */
@@ -48,7 +66,16 @@ public final class EnvInstaller {
         validatePrefixLocation(ctx, prefix);
 
         EnvBundleManifest manifest = EnvBundleManifest.load(assets);
-        String bootstrapAsset = AssetPicker.pick(assets, EnvPaths.ASSET_BOOTSTRAP, EnvPaths.ASSET_BOOTSTRAP_PLAIN);
+        String bootstrapAsset = null;
+        if (is32BitUserspace()) {
+            bootstrapAsset = AssetPicker.pick(assets, EnvPaths.ASSET_BOOTSTRAP_ARM);
+            if (bootstrapAsset != null) {
+                Log.i(TAG, "32-bit Android userspace detected without linker64; using 32-bit ARM bootstrap: " + bootstrapAsset);
+            }
+        }
+        if (bootstrapAsset == null) {
+            bootstrapAsset = AssetPicker.pick(assets, EnvPaths.ASSET_BOOTSTRAP, EnvPaths.ASSET_BOOTSTRAP_PLAIN);
+        }
         if (bootstrapAsset == null) {
             throw new IllegalStateException("required asset missing: " + EnvPaths.ASSET_BOOTSTRAP);
         }
@@ -88,14 +115,19 @@ public final class EnvInstaller {
                 throw new IOException("cannot create staging prefix: " + stage);
             }
             String targetPrefix = prefix.getAbsolutePath();
+            boolean isArm = EnvPaths.ASSET_BOOTSTRAP_ARM.equals(bootstrapAsset);
+            String expectedSha = (isArm && manifest.bootstrapArmSha256 != null)
+                    ? manifest.bootstrapArmSha256 : manifest.bootstrapSha256;
+            int expectedSymlinks = (isArm && manifest.bootstrapArmSymlinkCount > 0)
+                    ? manifest.bootstrapArmSymlinkCount : manifest.bootstrapSymlinkCount;
             BootstrapExtractor.extract(assets, bootstrapAsset, stage,
-                    manifest.bootstrapSha256, manifest.bootstrapSymlinkCount);
+                    expectedSha, expectedSymlinks);
             OverlayCopier.overlay(assets, EnvPaths.ASSET_OVERLAY, stage);
             PkgInstaller.install(assets, stage, targetPrefix);
             prepareTree(assets, stage, targetPrefix);
-            writeMarker(stage, manifest, manifest.bootstrapSha256,
-                    manifest.bootstrapSha256, false, targetPrefix);
-            validateTree(stage, manifest.bootstrapSymlinkCount);
+            writeMarker(stage, manifest, expectedSha,
+                    expectedSha, false, targetPrefix);
+            validateTree(stage, expectedSymlinks);
 
             // Preserve a previous interrupted/legacy prefix instead of deleting it.
             if (prefix.exists() && !TextFileDetector.isSymlink(prefix)) {

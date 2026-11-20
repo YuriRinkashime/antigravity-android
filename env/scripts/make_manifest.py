@@ -70,6 +70,14 @@ def make_manifest(root: Path) -> dict:
         "pkgSha256": tree_digest(pkg),
         "seedPackages": read_seed_packages(root),
     }
+
+    bootstrap_arm = root / "bootstrap" / "bootstrap-arm.tar.gz"
+    if bootstrap_arm.is_file():
+        with tarfile.open(bootstrap_arm, "r:gz") as archive:
+            arm_symlinks = sum(member.issym() for member in archive)
+        identity["bootstrapArmSha256"] = sha256_file(bootstrap_arm)
+        identity["bootstrapArmSymlinkCount"] = arm_symlinks
+
     canonical = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return {**identity, "bundleId": hashlib.sha256(canonical).hexdigest()}
 

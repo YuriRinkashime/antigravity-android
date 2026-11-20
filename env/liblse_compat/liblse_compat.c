@@ -1046,8 +1046,38 @@ static void sigill_handler(int sig, siginfo_t *info, void *ucontext) {
         return;
     }
 
-    signal(SIGILL, SIG_DFL);
+    // Restore kernel default SIGILL handler and re-raise
+    struct kernel_sigaction dfl_act;
+    memset(&dfl_act, 0, sizeof(dfl_act));
+    dfl_act.k_handler = (void *)SIG_DFL;
+    dfl_act.sa_flags = 0;
+    dfl_act.sa_restorer = NULL;
+    dfl_act.sa_mask = 0;
+    raw_rt_sigaction(SIGILL, &dfl_act, NULL);
     raise(SIGILL);
+}
+
+static int raw_rt_sigprocmask(int how, const void *set, void *oldset, size_t sigsetsize) {
+    register long x0 __asm__("x0") = how;
+    register long x1 __asm__("x1") = (long)set;
+    register long x2 __asm__("x2") = (long)oldset;
+    register long x3 __asm__("x3") = sigsetsize;
+    register long x8 __asm__("x8") = 135; /* __NR_rt_sigprocmask */
+    __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "memory");
+    return (int)x0;
+}
+
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+    if (set != NULL && how != 1 /* SIG_UNBLOCK */) {
+        sigset_t copy = *set;
+        sigdelset(&copy, SIGILL);
+        return raw_rt_sigprocmask(how, &copy, oldset, sizeof(sigset_t));
+    }
+    return raw_rt_sigprocmask(how, set, oldset, sizeof(sigset_t));
+}
+
+int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) {
+    return sigprocmask(how, set, oldset);
 }
 
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
@@ -1094,4 +1124,9 @@ __attribute__((constructor(101))) static void init_lse_compat(void) {
     } else {
         log_raw("[lse_compat] SUCCESS: SIGILL handler active in Linux kernel\n");
     }
+
+    sigset_t unblock_set;
+    sigemptyset(&unblock_set);
+    sigaddset(&unblock_set, SIGILL);
+    raw_rt_sigprocmask(1 /* SIG_UNBLOCK */, &unblock_set, NULL, sizeof(sigset_t));
 }

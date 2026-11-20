@@ -25,19 +25,24 @@ public final class EnvBundleManifest {
 
     public final String bundleId;
     public final String bootstrapSha256;
+    public final String bootstrapArmSha256;
     public final String overlaySha256;
     public final String pkgSha256;
     public final int bootstrapSymlinkCount;
+    public final int bootstrapArmSymlinkCount;
     public final List<String> seedPackages;
 
-    private EnvBundleManifest(String bundleId, String bootstrapSha256,
+    private EnvBundleManifest(String bundleId, String bootstrapSha256, String bootstrapArmSha256,
                               String overlaySha256, String pkgSha256,
-                              int bootstrapSymlinkCount, List<String> seedPackages) {
+                              int bootstrapSymlinkCount, int bootstrapArmSymlinkCount,
+                              List<String> seedPackages) {
         this.bundleId = bundleId;
         this.bootstrapSha256 = bootstrapSha256;
+        this.bootstrapArmSha256 = bootstrapArmSha256;
         this.overlaySha256 = overlaySha256;
         this.pkgSha256 = pkgSha256;
         this.bootstrapSymlinkCount = bootstrapSymlinkCount;
+        this.bootstrapArmSymlinkCount = bootstrapArmSymlinkCount;
         this.seedPackages = Collections.unmodifiableList(seedPackages);
     }
 
@@ -50,12 +55,17 @@ public final class EnvBundleManifest {
             }
             String bundleId = requireSha256(json.getString("bundleId"), "bundleId");
             String bootstrapSha = requireSha256(json.getString("bootstrapSha256"), "bootstrapSha256");
+            String bootstrapArmSha = json.optString("bootstrapArmSha256", null);
+            if (bootstrapArmSha != null && bootstrapArmSha.isEmpty()) {
+                bootstrapArmSha = null;
+            }
             String overlaySha = requireSha256(json.getString("overlaySha256"), "overlaySha256");
             String pkgSha = requireSha256(json.getString("pkgSha256"), "pkgSha256");
             int symlinks = json.getInt("bootstrapSymlinkCount");
             if (symlinks < 1) {
                 throw new IllegalStateException("env manifest contains no bootstrap symlinks");
             }
+            int armSymlinks = json.optInt("bootstrapArmSymlinkCount", 0);
             JSONArray packagesJson = json.getJSONArray("seedPackages");
             List<String> packages = new ArrayList<>();
             for (int i = 0; i < packagesJson.length(); i++) {
@@ -67,8 +77,8 @@ public final class EnvBundleManifest {
                     packages.add(name);
                 }
             }
-            return new EnvBundleManifest(bundleId, bootstrapSha, overlaySha,
-                    pkgSha, symlinks, packages);
+            return new EnvBundleManifest(bundleId, bootstrapSha, bootstrapArmSha, overlaySha,
+                    pkgSha, symlinks, armSymlinks, packages);
         } catch (IOException e) {
             throw new IllegalStateException("required asset missing: " + EnvPaths.ASSET_MANIFEST, e);
         } catch (org.json.JSONException e) {

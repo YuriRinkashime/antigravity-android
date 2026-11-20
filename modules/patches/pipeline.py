@@ -23,6 +23,7 @@ import faccessat
 import fchmodat
 import pidfd
 import sigill_handler
+import sigprocmask
 import resolv_redirect
 import crash_suppressor
 import pty_shell
@@ -35,6 +36,7 @@ ACTIVE_MODULES = [
     fchmodat,
     pidfd,
     sigill_handler,
+    sigprocmask,
     resolv_redirect,
     crash_suppressor,
     pty_shell
