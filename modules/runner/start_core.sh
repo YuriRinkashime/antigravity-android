@@ -102,7 +102,7 @@ export PATH="$RT/bin:${PREFIX:-$HOME/usr}/bin:$PATH"
 export SHELL="$RT/bin/bash"
 export LANG="C.UTF-8"
 export LC_ALL="C.UTF-8"
-export GODEBUG="netdns=go"
+export GODEBUG="netdns=go,asyncpreemptoff=1"
 if [ -f /proc/cpuinfo ] && (! grep -qi "aes" /proc/cpuinfo || ! grep -qi "atomics" /proc/cpuinfo); then
     export GODEBUG="$GODEBUG,cpu.all=off,arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off"
 fi

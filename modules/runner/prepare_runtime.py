@@ -19,8 +19,8 @@ import assemble
 import manifest_verifier
 import pipeline
 
-TARGET_SHA_FULL = "b0b6fdcb2d7a8be37ba08d4aa2ffac2e80658aa199ded4af6f1a666a115fe5cb"
-TARGET_SHA_NO_BYPASS = "ad1eea976e62f229cbee7372ca79279274f12751d22f2da785b05d51d53bc769"
+TARGET_SHA_FULL = "5de451822c24ade24fd129a3c595295201ee9b14961799b39c7672421120705e"
+TARGET_SHA_NO_BYPASS = "af20df3188b56bfb600329ce9fa681f4038fbf9e56614222c60b0e28e3dfd586"
 DEFAULT_DEST = "/data/user/0/com.agy/files/standalone_runtime"
 
 def prepare(dest_runtime_dir: str = DEFAULT_DEST, no_bypass: bool = False) -> bool:

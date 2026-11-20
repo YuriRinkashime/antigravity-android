@@ -83,8 +83,11 @@ public final class CoreLauncher {
         File logsDir = new File(filesDir, "logs");
         logsDir.mkdirs();
         File stderrLog = new File(logsDir, "core_stderr.log");
+        if (stderrLog.exists()) {
+            stderrLog.delete();
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            pb.redirectError(ProcessBuilder.Redirect.appendTo(stderrLog));
+            pb.redirectError(ProcessBuilder.Redirect.to(stderrLog));
         } else {
             pb.redirectErrorStream(true);
         }

@@ -1,6 +1,6 @@
 """
 sigill_handler.py - Preserves LD_PRELOAD SIGILL handler for liblse_compat.so by:
-1. Skipping Go runtime.rt_sigaction for SIGILL (4)
+1. Routing Go runtime.rt_sigaction via a trampoline cave that clears bit 3 (SIGILL) from sa_mask and skips SIGILL (4)
 2. Neutralizing Google Crashpad's raw svc #0 rt_sigaction for SIGILL (4)
 """
 import sys
@@ -16,7 +16,9 @@ import byte_replacer
 # Target 1: Go runtime.rt_sigaction
 # mov x0, [sp, 8]; mov x1, [sp, 16]; mov x2, [sp, 24]; mov x3, [sp, 32]; mov x8, 134; svc #0; str w0, [sp, 40]; ret
 TARGET_GO = bytes.fromhex("e00740f9e10b40f9e20f40f9e31340f9c81080d2010000d4e02b00b9c0035fd6")
-REPL_GO = bytes.fromhex("e08740a9e28f41a91f1000f1c81080d240000054010000d4ff2b00b9c0035fd6")
+REPL_HEADER = bytes.fromhex("888dab141f2003d51f2003d51f2003d51f2003d51f2003d51f2003d51f2003d5")
+CAVE_OFFSET = 0x818bbc0
+TRAMPOLINE = bytes.fromhex("e00740f91f1000f160020054e10b40f9e20f40f9e31340f9810100b4ff8300d1292840a92b3041a98cf97c92e92b00a9eb3301a9e1030091c81080d2010000d4ff83009105000014c81080d2010000d402000014e0031f2ae02b00b9c0035fd6")
 
 # Target 2: Google Crashpad direct sys_rt_sigaction for SIGILL (4)
 # mov w8, #134; mov w0, #4; str q0, [x27, 0x160]; svc #0; cmn x0, 0x1000
@@ -26,7 +28,7 @@ REPL_CRASHPAD = bytes.fromhex("c810805200008052605b803de0031faa1f0440b1")
 
 def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_missing: bool = False) -> Tuple[bool, Dict[str, Any]]:
     go_raw = byte_replacer.find_offsets(data, TARGET_GO)
-    go_pat = byte_replacer.find_offsets(data, REPL_GO)
+    go_pat = byte_replacer.find_offsets(data, REPL_HEADER)
     cp_raw = byte_replacer.find_offsets(data, TARGET_CRASHPAD)
     cp_pat = byte_replacer.find_offsets(data, REPL_CRASHPAD)
 
@@ -41,6 +43,7 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
         "go_patched_offsets": [hex(x) for x in go_pat],
         "crashpad_raw_offsets": [hex(x) for x in cp_raw],
         "crashpad_patched_offsets": [hex(x) for x in cp_pat],
+        "cave_offset": hex(CAVE_OFFSET)
     }
 
     has_go = (len(go_raw) + len(go_pat)) > 0
@@ -55,6 +58,8 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
 
     if verify:
         ok = (len(go_raw) == 0 and len(go_pat) >= 1 and len(cp_raw) == 0 and len(cp_pat) >= 1)
+        if ok and len(data) >= CAVE_OFFSET + len(TRAMPOLINE):
+            ok = (data[CAVE_OFFSET:CAVE_OFFSET + len(TRAMPOLINE)] == TRAMPOLINE)
         info["status"] = "verified" if ok else "unverified"
         return ok, info
 
@@ -64,7 +69,8 @@ def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_mi
 
     if not dry_run:
         for off in go_raw:
-            data[off:off + len(REPL_GO)] = REPL_GO
+            data[off:off + len(REPL_HEADER)] = REPL_HEADER
+        data[CAVE_OFFSET:CAVE_OFFSET + len(TRAMPOLINE)] = TRAMPOLINE
         for off in cp_raw:
             data[off:off + len(REPL_CRASHPAD)] = REPL_CRASHPAD
         info["status"] = "patched"

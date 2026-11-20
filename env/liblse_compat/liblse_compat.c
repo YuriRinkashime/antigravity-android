@@ -1092,6 +1092,13 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
         return 0; // Keep kernel handler point to sigill_handler
     }
 
+    struct sigaction copy;
+    if (act != NULL) {
+        copy = *act;
+        sigdelset(&copy.sa_mask, SIGILL);
+        act = &copy;
+    }
+
     typedef int (*sigaction_fn)(int, const struct sigaction *, struct sigaction *);
     static sigaction_fn real_sigaction = NULL;
     if (!real_sigaction) {
