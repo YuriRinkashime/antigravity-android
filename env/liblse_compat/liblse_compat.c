@@ -946,15 +946,16 @@ static bool emulate_crc32(ucontext_t *uc, uint32_t insn) {
     return false;
 }
 
+static const char *const sigill_paths[] = {
+    "/data/data/com.agy/files/logs/sigill.log",
+    "/data/user/0/com.agy/files/logs/sigill.log",
+    "/data/data/com.agy/files/sigill.log",
+    "/data/user/0/com.agy/files/sigill.log",
+    "/data/data/com.agy.dev/files/logs/sigill.log",
+    "/data/user/0/com.agy.dev/files/logs/sigill.log"
+};
+
 static void direct_sigill_log(uintptr_t pc, uint32_t insn, uintptr_t fault_addr) {
-    const char *paths[] = {
-        "/data/data/com.agy/files/logs/sigill.log",
-        "/data/user/0/com.agy/files/logs/sigill.log",
-        "/data/data/com.agy/files/sigill.log",
-        "/data/user/0/com.agy/files/sigill.log",
-        "/data/data/com.agy.dev/files/logs/sigill.log",
-        "/data/user/0/com.agy.dev/files/logs/sigill.log"
-    };
 
     char buf[256];
     int pos = 0;
@@ -995,7 +996,7 @@ static void direct_sigill_log(uintptr_t pc, uint32_t insn, uintptr_t fault_addr)
 
     for (int p = 0; p < 6; p++) {
         register long x0 __asm__("x0") = -100; // AT_FDCWD
-        register long x1 __asm__("x1") = (long)paths[p];
+        register long x1 __asm__("x1") = (long)sigill_paths[p];
         register long x2 __asm__("x2") = 0x441; // O_WRONLY | O_CREAT | O_APPEND
         register long x3 __asm__("x3") = 0644;
         register long x8 __asm__("x8") = 56; // __NR_openat
@@ -1102,9 +1103,49 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
     return 0;
 }
 
+#ifndef LSE_COMPAT_BUILD
+#define LSE_COMPAT_BUILD "unknown"
+#endif
+
 __attribute__((constructor(101))) static void init_lse_compat(void) {
-    log_raw("[lse_compat] INIT: installing kernel SIGILL handler\n");
+    unsigned long hwcap = getauxval(AT_HWCAP);
+    log_raw("[lse_compat] INIT build=" LSE_COMPAT_BUILD " hwcap=");
+    log_hex((uint64_t)hwcap);
+    log_raw("\n");
+    log_raw("[lse_compat] installing kernel SIGILL handler\n");
     lse_handler_installed = true;
+
+    char init_buf[128];
+    int ipos = 0;
+    const char *ihdr = "[lse_compat] INIT build=" LSE_COMPAT_BUILD " hwcap=0x";
+    while (ihdr[ipos]) { init_buf[ipos] = ihdr[ipos]; ipos++; }
+    for (int i = 15; i >= 0; i--) {
+        int nib = (int)((hwcap >> (i * 4)) & 0xF);
+        init_buf[ipos++] = (char)((nib < 10) ? ('0' + nib) : ('a' + nib - 10));
+    }
+    init_buf[ipos++] = '\n';
+
+    for (int p = 0; p < 6; p++) {
+        register long x0 __asm__("x0") = -100; // AT_FDCWD
+        register long x1 __asm__("x1") = (long)sigill_paths[p];
+        register long x2 __asm__("x2") = 0x241; // O_WRONLY | O_CREAT | O_TRUNC
+        register long x3 __asm__("x3") = 0644;
+        register long x8 __asm__("x8") = 56; // __NR_openat
+        __asm__ volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x3), "r"(x8) : "memory");
+        int fd = (int)x0;
+        if (fd >= 0) {
+            register long w0 __asm__("x0") = fd;
+            register long w1 __asm__("x1") = (long)init_buf;
+            register long w2 __asm__("x2") = ipos;
+            register long w8 __asm__("x8") = 64; // __NR_write
+            __asm__ volatile("svc #0" : "+r"(w0) : "r"(w1), "r"(w2), "r"(w8) : "memory");
+
+            register long c0 __asm__("x0") = fd;
+            register long c8 __asm__("x8") = 57; // __NR_close
+            __asm__ volatile("svc #0" : "+r"(c0) : "r"(c8) : "memory");
+            break;
+        }
+    }
 
     struct kernel_sigaction ksa;
     memset(&ksa, 0, sizeof(ksa));

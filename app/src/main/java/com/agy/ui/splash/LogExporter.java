@@ -89,7 +89,26 @@ public final class LogExporter {
             }
         }
 
+        File errFile = new File(context.getFilesDir(), "logs/core_stderr.log");
+        if (errFile.exists() && errFile.length() > 0) {
+            sb.append("\n=== Core Stderr Head (files/logs/core_stderr.log) ===\n");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(errFile), UTF8))) {
+                String line;
+                int count = 0;
+                while ((line = reader.readLine()) != null && count++ < 15) {
+                    sb.append(SensitiveDataRedactor.redactLine(line)).append("\n");
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         File sigillLog = new File(context.getFilesDir(), "logs/sigill.log");
+        if (!sigillLog.exists() || sigillLog.length() == 0) {
+            sigillLog = new File(context.getFilesDir(), "sigill.log");
+        }
+        if ((!sigillLog.exists() || sigillLog.length() == 0) && new File("/data/data/com.agy/files/logs/sigill.log").exists()) {
+            sigillLog = new File("/data/data/com.agy/files/logs/sigill.log");
+        }
         if (sigillLog.exists() && sigillLog.length() > 0) {
             sb.append("\n=== SIGILL Log (files/logs/sigill.log) ===\n");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(sigillLog), UTF8))) {

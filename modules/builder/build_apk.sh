@@ -106,12 +106,13 @@ rm -rf "$BUILD_DIR/gen" "$BUILD_DIR/res" "$BUILD_DIR/obj" "$BUILD_DIR/dex" "$BUI
        "$BUILD_DIR/unaligned.apk" "$BUILD_DIR/aligned.apk"
 mkdir -p "$BUILD_DIR/gen" "$BUILD_DIR/res" "$BUILD_DIR/obj" "$BUILD_DIR/dex" "$BUILD_DIR/staging" "$DIST_DIR"
 
-# Compile liblse_compat.so for ARMv8.0 GNU/Linux if cross-compiler is available
+# Compile liblse_compat.so for ARMv8.0 GNU/Linux if cross-compiler or native compiler is available
 if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     echo "[*] Compiling liblse_compat.so targeting ARMv8.0-A GNU/Linux..."
-    aarch64-linux-gnu-gcc -march=armv8-a -O2 -Wall -fPIC -shared "$PROJECT_ROOT/env/liblse_compat/liblse_compat.c" -o "$PROJECT_ROOT/modules/core/glibc/liblse_compat.so" -ldl
-    cp "$PROJECT_ROOT/modules/core/glibc/liblse_compat.so" "$PROJECT_ROOT/env/liblse_compat/liblse_compat.so"
-    echo "[OK] liblse_compat.so compiled and synchronized."
+    CC="aarch64-linux-gnu-gcc" bash "$PROJECT_ROOT/env/liblse_compat/build.sh"
+elif command -v clang >/dev/null 2>&1 && [ "$(uname -m)" = "aarch64" ]; then
+    echo "[*] Compiling liblse_compat.so targeting ARMv8.0-A GNU/Linux..."
+    bash "$PROJECT_ROOT/env/liblse_compat/build.sh"
 fi
 
 # Phase 01: Config Generation (creates BuildConfig.java, gen.xml, and build/AndroidManifest.xml)

@@ -318,6 +318,9 @@ public final class CoreProcessSupervisor {
     private static String describeExitCode(int code, java.io.File filesDir) {
         String base;
         switch (code) {
+            case 2:
+                base = " [fatal error / runtime.throw]";
+                break;
             case 137:
                 base = " [SIGKILL / system Out-Of-Memory LMK]";
                 break;
@@ -329,14 +332,6 @@ public final class CoreProcessSupervisor {
                 break;
             case 132:
                 base = " [SIGILL / illegal instruction]";
-                String sigill = getSigillLogTail(filesDir);
-                if (!sigill.isEmpty()) {
-                    base += " - " + sigill;
-                }
-                String stderrTail = getStderrLogTail(filesDir, 50);
-                if (!stderrTail.isEmpty()) {
-                    base += " | stderr: " + stderrTail;
-                }
                 break;
             case 143:
                 base = " [SIGTERM / terminated]";
@@ -344,6 +339,16 @@ public final class CoreProcessSupervisor {
             default:
                 base = "";
                 break;
+        }
+        if (code != 0) {
+            String sigill = getSigillLogTail(filesDir);
+            if (!sigill.isEmpty()) {
+                base += " - " + sigill;
+            }
+            String stderrTail = getStderrLogTail(filesDir, 50);
+            if (!stderrTail.isEmpty()) {
+                base += " | stderr: " + stderrTail;
+            }
         }
         return base;
     }

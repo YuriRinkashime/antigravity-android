@@ -21,8 +21,14 @@ public final class CoreInstaller {
     public static void installCore(RuntimeManager rm) {
         Context ctx = rm.appContext();
         File runtimeDir = rm.getRuntimeDir();
+        long lastUpdate = 0;
+        try {
+            lastUpdate = ctx.getPackageManager()
+                    .getPackageInfo(ctx.getPackageName(), 0).lastUpdateTime;
+        } catch (Exception ignored) {
+        }
         String manifestHash = getAssetManifestHash(ctx);
-        String expectedHash = (manifestHash != null ? manifestHash : "") + ":" + com.agy.BuildConfig.APP_VERSION_CODE;
+        String expectedHash = (manifestHash != null ? manifestHash : "") + ":" + com.agy.BuildConfig.APP_VERSION_CODE + ":" + lastUpdate;
         boolean upToDate = isRuntimeUpToDate(rm, expectedHash);
 
         if (!upToDate) {
