@@ -134,6 +134,11 @@ CMD+=(
     --app_data_dir "antigravity-app-standalone"
 )
 
+# Enable sidecars only if hardware supports crypto & atomics
+if [ -f /proc/cpuinfo ] && grep -qi "aes" /proc/cpuinfo && grep -qi "atomics" /proc/cpuinfo; then
+    CMD+=(--enable_sidecars)
+fi
+
 echo "[*] Launching core server on port $PORT..."
 echo "[*] Connecting stdout/stderr to modules/io stream splitter..."
 

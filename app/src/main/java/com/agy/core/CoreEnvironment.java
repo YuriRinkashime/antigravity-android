@@ -1,5 +1,6 @@
 package com.agy.core;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.agy.runtime.RuntimeManager;
@@ -99,11 +100,48 @@ public final class CoreEnvironment {
     private static Boolean sHasArmCrypto = null;
 
     /**
+     * Determines whether the current device is capable of running background sidecars
+     * (Automations / Scheduled Tasks) without triggering OOM (LMKD) or execution loops.
+     *
+     * Returns false on:
+     * - Budget SoCs lacking hardware crypto/atomics (e.g. MediaTek MT676x / Cortex-A53).
+     * - Devices flagged as isLowRamDevice or having < 3.5GB RAM (prevents LMKD kills).
+     */
+    public static boolean isSidecarsSupported(Context context) {
+        if (!hasArmHardwareCrypto()) {
+            Log.i(TAG, "sidecars disabled: CPU lacks ARMv8 crypto/atomics or is low-end MT676x SoC");
+            return false;
+        }
+        if (context != null) {
+            try {
+                android.app.ActivityManager am = (android.app.ActivityManager)
+                        context.getSystemService(Context.ACTIVITY_SERVICE);
+                if (am != null) {
+                    if (am.isLowRamDevice()) {
+                        Log.i(TAG, "sidecars disabled: isLowRamDevice is true");
+                        return false;
+                    }
+                    android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+                    am.getMemoryInfo(mi);
+                    if (mi.totalMem < 3500L * 1024 * 1024) {
+                        Log.i(TAG, "sidecars disabled: device RAM < 3.5GB (" + (mi.totalMem / (1024 * 1024)) + "MB)");
+                        return false;
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "could not query memory info for sidecars probe: " + t.getMessage());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Checks whether the current CPU supports ARMv8 Cryptography Extensions (AES & PMULL)
      * and LSE atomics. On ARMv8.0 cores without hardware crypto (e.g. MediaTek Helio A22 / G25 /
      * Cortex-A53), executing hardware crypto instructions raises SIGILL (exit code 132).
      */
-    private static synchronized boolean hasArmHardwareCrypto() {
+    public static synchronized boolean hasArmHardwareCrypto() {
         if (sHasArmCrypto != null) {
             return sHasArmCrypto;
         }

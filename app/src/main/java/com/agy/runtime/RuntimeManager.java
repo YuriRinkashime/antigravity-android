@@ -1,6 +1,7 @@
 package com.agy.runtime;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.agy.core.CoreEnvironment;
 import com.agy.core.CoreRuntimeState;
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class RuntimeManager {
 
+    private static final String TAG = "RuntimeManager";
     public static final String CORE_VERSION = RuntimeConfig.CORE_VERSION;
 
     private final Context appContext;
@@ -137,6 +139,12 @@ public final class RuntimeManager {
         cmd.add(RuntimePaths.APP_DATA_DIR_NAME);
         cmd.add("--web_bundle_path");
         cmd.add(getWebDir().getAbsolutePath());
+        if (CoreEnvironment.isSidecarsSupported(appContext)) {
+            Log.i(TAG, "Device hardware meets requirements; enabling sidecars (Automations)");
+            cmd.add("--enable_sidecars");
+        } else {
+            Log.i(TAG, "Device hardware is constrained; sidecars disabled for stability");
+        }
 
         return cmd.toArray(new String[0]);
     }
