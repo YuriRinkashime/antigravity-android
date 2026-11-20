@@ -34,14 +34,12 @@ def target_prefix(application_id):
     # Padding with slashes preserves the compiled string length and collapses
     # harmlessly in Android's path resolver (for example com.agy///files/usr).
     padded = package + b"/" * (len(TERMUX) - len(package))
-    return b"/data/data/" + application_id.encode("ascii"), padded
+    return b"/data/data/" + padded, padded
 
 
 def patch(name, data, application_id, text_prefix, binary_package):
-    if not is_dpkg(name):
-        return data
-    if data[:4] == b"\x7fELF":
-        return data.replace(TERMUX, binary_package)
+    # Only rewrite path prefixes starting with /data/data/com.termux to prevent
+    # unintended corruption of non-path symbols (e.g. intents or socket namespaces)
     if TEXT_OLD in data:
         return data.replace(TEXT_OLD, text_prefix)
     return data

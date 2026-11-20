@@ -68,10 +68,12 @@ public final class CoreInstaller {
         // If the env prefix survived a previous launch, its bridges are cheap to
         // (re)write now. A fresh env install rewrites them when it finishes.
         if (EnvInstaller.isInstalled(ctx)) {
-            File prefixBash = new File(EnvInstaller.prefix(ctx), com.agy.install.EnvPaths.BASH_REL);
+            File prefix = EnvInstaller.prefix(ctx);
+            File prefixBash = new File(prefix, com.agy.install.EnvPaths.BASH_REL);
             if (prefixBash.isFile()) {
                 com.agy.install.TermuxPrefixRewriter.patchBashBinary(prefixBash);
             }
+            com.agy.install.TermuxPrefixRewriter.patchElfBinaries(prefix, prefix.getAbsolutePath());
             ShellBridgeInstaller.install(rm);
         }
     }

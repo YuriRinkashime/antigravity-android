@@ -80,10 +80,20 @@ public final class ExecHandler {
             }
 
             String home = context.getFilesDir().getAbsolutePath();
+            String prefix = home + "/usr";
             pb.environment().put("HOME", home);
-            pb.environment().put("PATH", home + "/usr/bin:" + home + "/runtime/bin:/system/bin:" + System.getenv("PATH"));
+            pb.environment().put("PREFIX", prefix);
+            pb.environment().put("PATH", home + "/runtime/bin:" + prefix + "/bin:/system/bin:" + System.getenv("PATH"));
             pb.environment().put("RISH_APPLICATION_ID", context.getPackageName());
-            pb.environment().remove("LD_LIBRARY_PATH");
+            if (useRish) {
+                pb.environment().remove("LD_LIBRARY_PATH");
+            } else {
+                pb.environment().put("LD_LIBRARY_PATH", prefix + "/lib");
+                pb.environment().put("TERMINFO", prefix + "/share/terminfo");
+                pb.environment().put("OPENSSL_CONF", prefix + "/etc/tls/openssl.cnf");
+                pb.environment().put("SSL_CERT_FILE", prefix + "/etc/tls/cert.pem");
+                pb.environment().put("CURL_CA_BUNDLE", prefix + "/etc/tls/cert.pem");
+            }
 
             Process proc = pb.start();
 
