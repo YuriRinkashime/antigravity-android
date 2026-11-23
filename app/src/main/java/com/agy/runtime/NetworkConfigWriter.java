@@ -36,14 +36,16 @@ public final class NetworkConfigWriter {
         String resolvContent = resolv.toString();
         String hostsContent = "127.0.0.1 localhost\n::1 localhost\n";
 
-        // 1. Primary absolute resolver paths for patched language_server (/sdcard/rslv.cnf)
-        // Using an absolute path ensures DNS works regardless of process CWD or active workspace!
-        AtomicFileWriter.writeText(new File("/sdcard/rslv.cnf"), resolvContent);
-        AtomicFileWriter.writeText(new File("/sdcard/hs"), hostsContent);
-        AtomicFileWriter.writeText(new File("/storage/emulated/0/rslv.cnf"), resolvContent);
-        AtomicFileWriter.writeText(new File("/storage/emulated/0/hs"), hostsContent);
+        // Clean up any legacy external storage files
+        try {
+            new File("/sdcard/rslv.cnf").delete();
+            new File("/sdcard/hs").delete();
+            new File("/storage/emulated/0/rslv.cnf").delete();
+            new File("/storage/emulated/0/hs").delete();
+        } catch (Exception ignored) {
+        }
 
-        // 2. App root etc (for core in filesDir)
+        // 1. App root etc (for core in filesDir)
         AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
         AtomicFileWriter.writeText(new File(etc, "hosts"), hostsContent);
 

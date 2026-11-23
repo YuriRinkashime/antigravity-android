@@ -62,13 +62,13 @@ public final class CoreEnvironment {
         env.put("LANG", "C.UTF-8");
         env.put("LC_ALL", "C.UTF-8");
 
-        // Native Bionic getaddrinfo resolver hooked via liblse_compat.so provides flawless Android DNS.
+        // Pure-Go resolver keeps DNS independent of Android's missing /etc.
         String godebug = env.get("GODEBUG");
         StringBuilder godebugBuilder = new StringBuilder();
         if (godebug != null && !godebug.isEmpty()) {
             godebugBuilder.append(godebug).append(",");
         }
-        godebugBuilder.append("netdns=cgo,asyncpreemptoff=1");
+        godebugBuilder.append("netdns=go,asyncpreemptoff=1");
         if (!hasArmHardwareCrypto()) {
             Log.w(TAG, "CPU lacks ARMv8 crypto/atomics extension; disabling Go hardware crypto acceleration");
             godebugBuilder.append(",cpu.all=off,arm64.aes=off,arm64.pmull=off,arm64.sha1=off,arm64.sha2=off,arm64.sha3=off,arm64.sha512=off,arm64.crc32=off,arm64.atomics=off,arm64.cpuid=off");
