@@ -4,6 +4,9 @@ crash_suppressor.py - Bypasses preinit CPU feature check and preinit atomic flag
 from typing import Tuple, Dict, Any, List, Union
 
 CPU_SIGNATURES = [
+    # v2.34.0
+    (bytes.fromhex("b30701d00a60905268be40f9e903282a3f010aeae1020054e8033836e8045036"),
+     bytes.fromhex("190000141f2003d51f2003d51f2003d51f2003d51f2003d51f2003d51f2003d5")),
     # v2.33.0
     (bytes.fromhex("b30401900a609052681e44f9e903282a3f010aeae1020054e8033836e8045036"),
      bytes.fromhex("190000141f2003d51f2003d51f2003d51f2003d51f2003d51f2003d51f2003d5")),
@@ -16,6 +19,9 @@ CPU_SIGNATURES = [
 ]
 
 ATOMIC_SIGNATURES = [
+    # v2.34.0
+    (bytes.fromhex("680401f008a12c91290080520801e9f8480000b4c0035fd61f2003d5"),
+     bytes.fromhex("680401f008a12c91090140f92a008052490000b4c0035fd60a0100f9")),
     # v2.33.0
     (bytes.fromhex("680101d008a10791290080520801e9f8480000b4c0035fd61f2003d5"),
      bytes.fromhex("680101d008a10791090140f92a008052490000b4c0035fd60a0100f9")),

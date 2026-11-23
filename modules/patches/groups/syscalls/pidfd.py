@@ -14,13 +14,21 @@ sys.path.insert(0, os.path.join(PATCHES_ROOT, "engine"))
 import byte_replacer
 
 # mov x1, x0; mov x0, #434; bl syscall.Syscall; cbz x2, ...
-TARGET = bytes.fromhex("e10300aa403680d2e2c6fe97420100b4")
+TARGETS = [
+    # v2.34.0
+    bytes.fromhex("e10300aa403680d2fac6fe97420100b4"),
+    # v2.33.0
+    bytes.fromhex("e10300aa403680d2e2c6fe97420100b4"),
+]
+TARGET = TARGETS[0]
 # mov x1, x0; mov x2, #38 (ENOSYS); b #8; nop
 REPLACEMENT = bytes.fromhex("e10300aac20480d2020000141f2003d5")
 EXPECTED_COUNT = 1
 
 def apply(data: bytearray, verify: bool = False, dry_run: bool = False, allow_missing: bool = False) -> Tuple[bool, Dict[str, Any]]:
-    raw_offsets = byte_replacer.find_offsets(data, TARGET)
+    raw_offsets = []
+    for tgt in TARGETS:
+        raw_offsets.extend(byte_replacer.find_offsets(data, tgt))
     pat_offsets = byte_replacer.find_offsets(data, REPLACEMENT)
     
     total = len(raw_offsets) + len(pat_offsets)

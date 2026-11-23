@@ -118,7 +118,7 @@ CMD=(
     --library-path "$RT/lib"
 )
 
-if [ -f "$LSE_COMPAT" ]; then
+if [ -f "$LSE_COMPAT" ] && [ -f /proc/cpuinfo ] && ! grep -qi "atomics" /proc/cpuinfo; then
     CMD+=(--preload "$LSE_COMPAT")
 fi
 
