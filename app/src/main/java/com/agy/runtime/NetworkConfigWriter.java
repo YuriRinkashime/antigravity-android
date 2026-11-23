@@ -31,7 +31,15 @@ public final class NetworkConfigWriter {
         for (String ip : DnsCollector.collectDnsServers(appContext)) {
             resolv.append("nameserver ").append(ip).append('\n');
         }
-        AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolv.toString());
+        String resolvContent = resolv.toString();
+        AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
         AtomicFileWriter.writeText(new File(etc, "hosts"), "127.0.0.1 localhost\n");
+
+        // Keep usr/etc in sync for userspace tools and shells
+        File usrEtc = new File(appContext.getFilesDir(), "usr/etc");
+        if (usrEtc.exists() || usrEtc.mkdirs()) {
+            AtomicFileWriter.writeText(new File(usrEtc, "resolv.conf"), resolvContent);
+            AtomicFileWriter.writeText(new File(usrEtc, "hosts"), "127.0.0.1 localhost\n");
+        }
     }
 }
