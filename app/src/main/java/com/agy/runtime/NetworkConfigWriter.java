@@ -21,25 +21,63 @@ public final class NetworkConfigWriter {
     }
 
     public static void write(Context appContext) {
-        File etc = new File(appContext.getFilesDir(), "etc");
+        File filesDir = appContext.getFilesDir();
+        File etc = new File(filesDir, "etc");
         if (!etc.exists() && !etc.mkdirs()) {
             Log.w(TAG, "cannot create " + etc);
             return;
         }
+
         StringBuilder resolv = new StringBuilder();
-        resolv.append("options timeout:1 attempts:1 rotate\n");
+        resolv.append("options timeout:2 attempts:2\n");
         for (String ip : DnsCollector.collectDnsServers(appContext)) {
             resolv.append("nameserver ").append(ip).append('\n');
         }
         String resolvContent = resolv.toString();
-        AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
-        AtomicFileWriter.writeText(new File(etc, "hosts"), "127.0.0.1 localhost\n");
+        String hostsContent = "127.0.0.1 localhost\n::1 localhost\n";
 
-        // Keep usr/etc in sync for userspace tools and shells
-        File usrEtc = new File(appContext.getFilesDir(), "usr/etc");
+        // 1. App root etc (for core in filesDir)
+        AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
+        AtomicFileWriter.writeText(new File(etc, "hosts"), hostsContent);
+
+        // 2. Terminal & environment userspace prefix (usr/etc)
+        File usrEtc = new File(filesDir, "usr/etc");
         if (usrEtc.exists() || usrEtc.mkdirs()) {
             AtomicFileWriter.writeText(new File(usrEtc, "resolv.conf"), resolvContent);
-            AtomicFileWriter.writeText(new File(usrEtc, "hosts"), "127.0.0.1 localhost\n");
+            AtomicFileWriter.writeText(new File(usrEtc, "hosts"), hostsContent);
+        }
+
+        // 3. Projects directory and subproject directories
+        // When language_server switches to a workspace (os.Chdir), CWD is the project folder.
+        // Materialize etc/resolv.conf in projects/ and all subdirectories so "etc//resolv.conf"
+        // always resolves!
+        File projects = new File(filesDir, "projects");
+        syncDirectoryEtc(projects, resolvContent, hostsContent);
+        File[] projectDirs = projects.listFiles();
+        if (projectDirs != null) {
+            for (File p : projectDirs) {
+                if (p.isDirectory()) {
+                    syncDirectoryEtc(p, resolvContent, hostsContent);
+                }
+            }
+        }
+
+        // 4. Runtime directory
+        File runtimeEtc = new File(filesDir, "runtime/etc");
+        if (runtimeEtc.exists()) {
+            AtomicFileWriter.writeText(new File(runtimeEtc, "resolv.conf"), resolvContent);
+            AtomicFileWriter.writeText(new File(runtimeEtc, "hosts"), hostsContent);
+        }
+    }
+
+    private static void syncDirectoryEtc(File dir, String resolvContent, String hostsContent) {
+        if (!dir.exists() && !dir.mkdirs()) {
+            return;
+        }
+        File etc = new File(dir, "etc");
+        if (etc.exists() || etc.mkdirs()) {
+            AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
+            AtomicFileWriter.writeText(new File(etc, "hosts"), hostsContent);
         }
     }
 }

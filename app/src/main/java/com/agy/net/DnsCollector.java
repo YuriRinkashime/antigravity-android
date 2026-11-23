@@ -44,13 +44,14 @@ public final class DnsCollector {
         } catch (Exception e) {
             Log.w(TAG, "DNS discovery failed", e);
         }
-        List<String> servers = new ArrayList<>(ipv4.size() + ipv6.size());
+        List<String> servers = new ArrayList<>(ipv4.size() + ipv6.size() + 3);
         servers.addAll(ipv4);
         servers.addAll(ipv6);
-        if (servers.isEmpty()) {
-            servers.add("1.1.1.1");
-            servers.add("77.88.8.8");
-            servers.add("8.8.8.8");
+        // Always guarantee public DNS fallbacks so DNS never fails on empty or loopback-only networks
+        for (String fallback : new String[]{"8.8.8.8", "1.1.1.1", "8.8.4.4"}) {
+            if (!servers.contains(fallback)) {
+                servers.add(fallback);
+            }
         }
         return servers;
     }
@@ -65,6 +66,13 @@ public final class DnsCollector {
             }
             String ip = addr.getHostAddress();
             if (ip == null || ip.isEmpty() || ip.indexOf('%') >= 0) {
+                continue;
+            }
+            // Filter loopback (::1, 127.0.0.1) and unspecified addresses.
+            // Android uses internal netd sockets for Private DNS and does NOT run
+            // a UDP DNS listener on port 53; querying loopback yields "connection refused".
+            if (addr.isLoopbackAddress() || addr.isAnyLocalAddress()
+                    || "::1".equals(ip) || ip.startsWith("127.")) {
                 continue;
             }
             if (addr instanceof Inet4Address) {
