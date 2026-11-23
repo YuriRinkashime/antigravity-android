@@ -43,7 +43,7 @@ modules/patches/
 | **syscalls** | `fchmodat` | `syscall.fchmodat2` (sys_452: `0xd2803880`) | Ретаргетинг на `fchmodat` (sys_53: `0xd28006a0`) |
 | **syscalls** | `pidfd` | `internal/syscall/unix.PidFDOpen` (sys_434: `0xd2803640`) | Возврат `(-1, syscall.ENOSYS)` без вызова сисколла для предотвращения SIGSYS seccomp |
 | **sigill** | `sigill_handler` | Вызов `rt_sigaction` в рантайме Go | Игнорирование сигнала `SIGILL` (4) для сохранения обработчика `liblse_compat.so` |
-| **resolv** | `resolv_redirect` | Строка `/etc/resolv.conf` (16 байт) | Замена на `etc//resolv.conf` без изменения длины |
+| **resolv** | `resolv_redirect` | Строка `/etc/resolv.conf` (16 байт) | Замена на `/sdcard/rslv.cnf` без изменения длины |
 | **failfast** | `crash_suppressor` | ARMv8.0-A CPU feature check (`0x7701180`) & preinit atomic (`0x7765c60`) | Branch `b +0x64` в обход проверки LSE/CRC/AES и замена `ldaddal` на `ldr`/`str` для полной совместимости с процессорами ARMv8.0-A (Snapdragon 660 и др., без аппаратного LSE) |
 
 ---

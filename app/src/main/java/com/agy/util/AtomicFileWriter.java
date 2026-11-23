@@ -11,7 +11,7 @@ public final class AtomicFileWriter {
     private AtomicFileWriter() {
     }
 
-    /** Text write via a sibling temp file then rename; falls back to a retry. */
+    /** Text write via a sibling temp file then rename; falls back to direct write if rename fails. */
     public static void writeText(File target, String content) {
         File dir = target.getParentFile();
         if (dir != null && !dir.exists() && !dir.mkdirs()) {
@@ -24,6 +24,12 @@ public final class AtomicFileWriter {
             out.getFD().sync();
         } catch (Exception e) {
             IoUtil.deleteQuietly(tmp);
+            // Fallback to direct write if tmp write fails
+            try (FileOutputStream out = new FileOutputStream(target)) {
+                out.write(content.getBytes(Charset.forName("UTF-8")));
+                out.flush();
+            } catch (Exception ignored) {
+            }
             return;
         }
         if (tmp.renameTo(target)) {
@@ -31,6 +37,12 @@ public final class AtomicFileWriter {
         }
         if (target.delete() && tmp.renameTo(target)) {
             return;
+        }
+        // Direct write fallback (crucial for Android FUSE/sdcard where rename-over across mounts fails)
+        try (FileOutputStream out = new FileOutputStream(target)) {
+            out.write(content.getBytes(Charset.forName("UTF-8")));
+            out.flush();
+        } catch (Exception ignored) {
         }
         IoUtil.deleteQuietly(tmp);
     }

@@ -1,27 +1,29 @@
 """
-resolv_redirect.py - Relative resolver path patch: /etc/resolv.conf -> etc//resolv.conf (length 16 in-place).
+resolv_redirect.py - Absolute resolver path patch: /etc/resolv.conf -> /sdcard/rslv.cnf (length 16 in-place).
 """
 from typing import Tuple, Dict, Any, List, Union
 
 TARGET = b"/etc/resolv.conf"
-REPLACEMENT = b"etc//resolv.conf"
+LEGACY_TARGET = b"etc//resolv.conf"
+REPLACEMENT = b"/sdcard/rslv.cnf"
 ADJACENT_REJECT = b"/.\\"
-EXPECTED_COUNT = 2
+EXPECTED_COUNT = 1
 
 def scan(data: Union[bytes, bytearray, memoryview]) -> Tuple[List[int], List[int], List[int]]:
     clean = []
     rejected = []
-    pos = 0
-    while True:
-        pos = data.find(TARGET, pos)
-        if pos < 0:
-            break
-        prev_b = data[pos - 1] if pos > 0 else None
-        next_b = data[pos + len(TARGET)] if pos + len(TARGET) < len(data) else None
-        adjacent = (prev_b is not None and bytes([prev_b]) in ADJACENT_REJECT) or (
-            next_b is not None and bytes([next_b]) in ADJACENT_REJECT)
-        (rejected if adjacent else clean).append(pos)
-        pos += len(TARGET)
+    for tgt in (TARGET, LEGACY_TARGET):
+        pos = 0
+        while True:
+            pos = data.find(tgt, pos)
+            if pos < 0:
+                break
+            prev_b = data[pos - 1] if pos > 0 else None
+            next_b = data[pos + len(tgt)] if pos + len(tgt) < len(data) else None
+            adjacent = (prev_b is not None and bytes([prev_b]) in ADJACENT_REJECT) or (
+                next_b is not None and bytes([next_b]) in ADJACENT_REJECT)
+            (rejected if adjacent else clean).append(pos)
+            pos += len(tgt)
 
     repl = []
     pos = 0

@@ -36,33 +36,49 @@ public final class NetworkConfigWriter {
         String resolvContent = resolv.toString();
         String hostsContent = "127.0.0.1 localhost\n::1 localhost\n";
 
-        // 1. App root etc (for core in filesDir)
+        // 1. Primary absolute resolver paths for patched language_server (/sdcard/rslv.cnf)
+        // Using an absolute path ensures DNS works regardless of process CWD or active workspace!
+        AtomicFileWriter.writeText(new File("/sdcard/rslv.cnf"), resolvContent);
+        AtomicFileWriter.writeText(new File("/sdcard/hs"), hostsContent);
+        AtomicFileWriter.writeText(new File("/storage/emulated/0/rslv.cnf"), resolvContent);
+        AtomicFileWriter.writeText(new File("/storage/emulated/0/hs"), hostsContent);
+
+        // 2. App root etc (for core in filesDir)
         AtomicFileWriter.writeText(new File(etc, "resolv.conf"), resolvContent);
         AtomicFileWriter.writeText(new File(etc, "hosts"), hostsContent);
 
-        // 2. Terminal & environment userspace prefix (usr/etc)
+        // 3. Terminal & environment userspace prefix (usr/etc)
         File usrEtc = new File(filesDir, "usr/etc");
         if (usrEtc.exists() || usrEtc.mkdirs()) {
             AtomicFileWriter.writeText(new File(usrEtc, "resolv.conf"), resolvContent);
             AtomicFileWriter.writeText(new File(usrEtc, "hosts"), hostsContent);
         }
 
-        // 3. Projects directory and subproject directories
-        // When language_server switches to a workspace (os.Chdir), CWD is the project folder.
-        // Materialize etc/resolv.conf in projects/ and all subdirectories so "etc//resolv.conf"
-        // always resolves!
-        File projects = new File(filesDir, "projects");
-        syncDirectoryEtc(projects, resolvContent, hostsContent);
-        File[] projectDirs = projects.listFiles();
-        if (projectDirs != null) {
-            for (File p : projectDirs) {
+        // 4. Projects directory ($HOME/.gemini/config/projects) and all subprojects
+        File geminiProjects = new File(filesDir, ".gemini/config/projects");
+        syncDirectoryEtc(geminiProjects, resolvContent, hostsContent);
+        File[] geminiDirs = geminiProjects.listFiles();
+        if (geminiDirs != null) {
+            for (File p : geminiDirs) {
                 if (p.isDirectory()) {
                     syncDirectoryEtc(p, resolvContent, hostsContent);
                 }
             }
         }
 
-        // 4. Runtime directory
+        // 5. filesDir/projects for backwards compatibility
+        File legacyProjects = new File(filesDir, "projects");
+        syncDirectoryEtc(legacyProjects, resolvContent, hostsContent);
+        File[] legacyDirs = legacyProjects.listFiles();
+        if (legacyDirs != null) {
+            for (File p : legacyDirs) {
+                if (p.isDirectory()) {
+                    syncDirectoryEtc(p, resolvContent, hostsContent);
+                }
+            }
+        }
+
+        // 6. Runtime directory
         File runtimeEtc = new File(filesDir, "runtime/etc");
         if (runtimeEtc.exists()) {
             AtomicFileWriter.writeText(new File(runtimeEtc, "resolv.conf"), resolvContent);
