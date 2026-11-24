@@ -96,10 +96,17 @@
   const urlTabChosen = !!(initialTab && document.querySelector(`.tab[data-tab="${CSS.escape(initialTab)}"]`));
   const currentConv = () => window.sidecar?.conversationId || params.get('conversationId') || '';
 
-  // GET routes bypass token auth, so plain fetch works both in the iframe and standalone.
+  // Securely fetch JSON from sidecar backend with token propagation
   async function getJson(path) {
+    const token = window.sidecar?.token || params.get('token') || '';
+    let url = path;
+    if (token && !url.includes('token=')) {
+      url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+    }
+    const headers = {};
+    if (token) headers['X-Sidecar-Token'] = token;
     const f = window.sidecar?.fetch ? window.sidecar.fetch.bind(window.sidecar) : fetch;
-    const res = await f(path, { method: 'GET' });
+    const res = await f(url, { method: 'GET', headers });
     if (!res.ok) throw new Error(`${path}: ${res.status}`);
     return res.json();
   }

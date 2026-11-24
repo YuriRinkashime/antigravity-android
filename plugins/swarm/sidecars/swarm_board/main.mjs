@@ -27,6 +27,7 @@ const STATIC = {
   '/gif.js': ['gif.js', 'application/javascript'],
   '/hive.js': ['hive.js', 'application/javascript'],
   '/hive.css': ['hive.css', 'text/css'],
+  '/preload.js': ['preload.js', 'application/javascript'],
   // Inlined by app.js into the narrator frame's srcdoc; served as text.
   '/narrator_bootstrap.js': ['narrator_bootstrap.js', 'text/plain'],
 };
@@ -1339,20 +1340,41 @@ app.page('/', () => {
   let html = readFileSync(join(__dirname, 'index.html'), 'utf-8');
   try {
     const styles = readFileSync(join(__dirname, 'styles.css'), 'utf-8');
-    const hive = readFileSync(join(__dirname, 'hive.css'), 'utf-8');
+    const hiveCss = readFileSync(join(__dirname, 'hive.css'), 'utf-8');
+    const preloadJs = existsSync(join(__dirname, 'preload.js'))
+      ? readFileSync(join(__dirname, 'preload.js'), 'utf-8')
+      : '';
+    const gifJs = readFileSync(join(__dirname, 'gif.js'), 'utf-8');
+    const hiveJs = readFileSync(join(__dirname, 'hive.js'), 'utf-8');
+    const appJs = readFileSync(join(__dirname, 'app.js'), 'utf-8');
+
     html = html.replace('<link rel="stylesheet" href="/styles.css">', `<style data-inline="styles">\n${styles}\n</style>`);
-    html = html.replace('<link rel="stylesheet" href="/hive.css">', `<style data-inline="hive">\n${hive}\n</style>`);
+    html = html.replace('<link rel="stylesheet" href="/hive.css">', `<style data-inline="hive">\n${hiveCss}\n</style>`);
+
+    // Self-contained inlined bundle: eliminates all reverse-proxy 401 subresource blocking
+    const scripts = [
+      preloadJs ? `<script data-inline="preload">\n${preloadJs}\n</script>` : '',
+      `<script data-inline="gif">\n${gifJs}\n</script>`,
+      `<script data-inline="hive">\n${hiveJs}\n</script>`,
+      `<script data-inline="app">\n${appJs}\n</script>`
+    ].filter(Boolean).join('\n');
+
     html = html.replace('<script src="/preload.js"></script>', '');
+    html = html.replace('<script src="/gif.js"></script>', '');
+    html = html.replace('<script src="/hive.js"></script>', '');
+    html = html.replace('<script src="/app.js"></script>', scripts);
   } catch (err) {
-    console.error('Failed to inline styles:', err);
+    console.error('Failed to inline sidecar assets:', err);
   }
   return html;
 });
 
 for (const [route, [file, type]] of Object.entries(STATIC)) {
   const handler = () => new Response(readFileSync(join(__dirname, file), 'utf-8'), { contentType: type });
+  app.page(route, handler);
   app.api(route, handler, 'GET');
   if (route.startsWith('/')) {
+    app.page(route.slice(1), handler);
     app.api(route.slice(1), handler, 'GET');
   }
 }
