@@ -1348,21 +1348,22 @@ app.page('/', () => {
     const hiveJs = readFileSync(join(__dirname, 'hive.js'), 'utf-8');
     const appJs = readFileSync(join(__dirname, 'app.js'), 'utf-8');
 
-    html = html.replace('<link rel="stylesheet" href="/styles.css">', `<style data-inline="styles">\n${styles}\n</style>`);
-    html = html.replace('<link rel="stylesheet" href="/hive.css">', `<style data-inline="hive">\n${hiveCss}\n</style>`);
+    html = html.split('<link rel="stylesheet" href="/styles.css">').join(`<style data-inline="styles">\n${styles}\n</style>`);
+    html = html.split('<link rel="stylesheet" href="/hive.css">').join(`<style data-inline="hive">\n${hiveCss}\n</style>`);
 
-    // Self-contained inlined bundle: eliminates all reverse-proxy 401 subresource blocking
+    // Self-contained inlined bundle: escape </script inside code so HTML parser never prematurely closes tags
+    const cleanJs = (code) => code.replace(/<\/script/gi, '<\\/script');
     const scripts = [
-      preloadJs ? `<script data-inline="preload">\n${preloadJs}\n</script>` : '',
-      `<script data-inline="gif">\n${gifJs}\n</script>`,
-      `<script data-inline="hive">\n${hiveJs}\n</script>`,
-      `<script data-inline="app">\n${appJs}\n</script>`
+      preloadJs ? `<script data-inline="preload">\n${cleanJs(preloadJs)}\n</script>` : '',
+      `<script data-inline="gif">\n${cleanJs(gifJs)}\n</script>`,
+      `<script data-inline="hive">\n${cleanJs(hiveJs)}\n</script>`,
+      `<script data-inline="app">\n${cleanJs(appJs)}\n</script>`
     ].filter(Boolean).join('\n');
 
-    html = html.replace('<script src="/preload.js"></script>', '');
-    html = html.replace('<script src="/gif.js"></script>', '');
-    html = html.replace('<script src="/hive.js"></script>', '');
-    html = html.replace('<script src="/app.js"></script>', scripts);
+    html = html.split('<script src="/preload.js"></script>').join('');
+    html = html.split('<script src="/gif.js"></script>').join('');
+    html = html.split('<script src="/hive.js"></script>').join('');
+    html = html.split('<script src="/app.js"></script>').join(scripts);
   } catch (err) {
     console.error('Failed to inline sidecar assets:', err);
   }

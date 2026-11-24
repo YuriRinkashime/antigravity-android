@@ -3228,8 +3228,8 @@
         `<meta http-equiv="Content-Security-Policy" content="${FRAME_CSP}">` +
         `<meta name="viewport" content="width=device-width, initial-scale=1">` +
         `<style>${css}</style>` +
-        `<script type="application/json" id="narrator-data">${data}</script>` +
-        `<script>${boot}</script>\n` + html;
+        `<script type="application/json" id="narrator-data">${data}<\/script>` +
+        `<script>${boot}<\/script>\n` + html;
   }
 
   // Builds the frame when view.html changed; otherwise sends changed data.
