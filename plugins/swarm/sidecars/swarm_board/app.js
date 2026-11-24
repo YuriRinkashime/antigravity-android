@@ -109,20 +109,33 @@
   // from --background's luminance so native controls and status hues follow.
   function syncScheme() {
     const probe = document.createElement('span');
-    probe.style.cssText = 'position:absolute;visibility:hidden;color:var(--background, #f7f7f8)';
+    probe.style.cssText = 'position:absolute;visibility:hidden;color:var(--background, #18181b)';
     document.documentElement.appendChild(probe);
     const c = getComputedStyle(probe).color;
     probe.remove();
     const nums = (c.match(/[\d.]+/g) || []).map(Number);
-    if (nums.length < 3) return;
-    // "rgb(r, g, b)" is 0-255; "color(srgb r g b)" is 0-1.
-    const scale = c.startsWith('color(') ? 1 : 255;
-    const [r, g, b] = nums.slice(0, 3).map((v) => v / scale);
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    const theme = lum < 0.5 ? 'dark' : 'light';
+    let dark = true;
+    if (nums.length >= 3) {
+      // "rgb(r, g, b)" is 0-255; "color(srgb r g b)" is 0-1.
+      const scale = c.startsWith('color(') ? 1 : 255;
+      const [r, g, b] = nums.slice(0, 3).map((v) => v / scale);
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      dark = lum < 0.5;
+    } else if (window.matchMedia) {
+      dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    const theme = dark ? 'dark' : 'light';
     if (document.documentElement.dataset.theme !== theme) document.documentElement.dataset.theme = theme;
   }
   syncScheme();
+  if (window.matchMedia) {
+    try {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        syncScheme();
+        postTheme();
+      });
+    } catch {}
+  }
   // Theme changes are forwarded to the narrator frame too (postTheme is
   // defined below; the observer only fires after startup).
   new MutationObserver(() => {
@@ -424,14 +437,16 @@
   async function poll() {
     clearTimeout(pollTimer);
     pollTimer = 0;
-    if (isHidden() && !state.swarm) {
+    if (pollInFlight) return;
+    if (isHidden() && !state.swarm && !state.firstLoad) {
       wasHidden = true;
+      pollTimer = setTimeout(poll, IDLE_POLL_MS);
       return;
     }
-    if (pollInFlight) return;
     pollInFlight = true;
     let delay = POLL_MS;
     try {
+      state.firstLoad = false;
       const conv = currentConv();
       if (conv !== state.conv) {
         state.conv = conv;
@@ -497,7 +512,7 @@
       pollInFlight = false;
       if (isHidden()) {
         wasHidden = true;
-        if (state.swarm) pollTimer = setTimeout(poll, HIDDEN_POLL_MS);
+        pollTimer = setTimeout(poll, state.swarm ? HIDDEN_POLL_MS : IDLE_POLL_MS);
       } else {
         setLive(Date.now() - state.lastOk <= POLL_MS * 4);
         pollTimer = setTimeout(poll, delay);

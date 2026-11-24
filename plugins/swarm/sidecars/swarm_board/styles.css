@@ -11,33 +11,33 @@
  * Spacing is on a 4px scale; type follows the toolkit's xs/sm scale.
  */
 :root {
-  color-scheme: light;
-  /* Surfaces */
-  --sw-bg: var(--background, #f7f7f8);
-  --sw-card: var(--card, #ffffff);
-  --sw-secondary: var(--secondary, #e6e7e9);
-  --sw-muted: var(--muted, #eff0f1);
+  color-scheme: dark light;
+  /* Surfaces - default dark so Android dark mode is crisp and never white */
+  --sw-bg: var(--background, #18181b);
+  --sw-card: var(--card, #202023);
+  --sw-secondary: var(--secondary, #27272a);
+  --sw-muted: var(--muted, #27272a);
   /* Text */
-  --sw-fg: var(--foreground, #1d1f21);
-  --sw-fg-2: var(--secondary-foreground, #3d4348);
-  --sw-fg-muted: var(--muted-foreground, #5d676f);
-  --sw-fg-faint: var(--placeholder, #9da5ab);
+  --sw-fg: var(--foreground, #f4f4f5);
+  --sw-fg-2: var(--secondary-foreground, #d4d4d8);
+  --sw-fg-muted: var(--muted-foreground, #a1a1aa);
+  --sw-fg-faint: var(--placeholder, #71717a);
   /* Lines + accents */
-  --sw-border: var(--border, rgba(0, 0, 0, 0.08));
-  --sw-card-border: var(--card-border, rgba(0, 0, 0, 0.1));
-  --sw-primary: var(--primary, #007acc);
+  --sw-border: var(--border, rgba(255, 255, 255, 0.1));
+  --sw-card-border: var(--card-border, rgba(255, 255, 255, 0.12));
+  --sw-primary: var(--primary, #388bfd);
   --sw-primary-fg: var(--primary-foreground, #ffffff);
-  --sw-error: var(--error, #cb3d3d);
+  --sw-error: var(--error, #f85149);
   /* Status hues (toolkit palette; no host token exists for these). */
-  --sw-success: #63984f;
-  --sw-warning: #bca136;
+  --sw-success: #7aae66;
+  --sw-warning: #cab43e;
   /* Derived */
-  --sw-hover: color-mix(in srgb, var(--sw-fg) 5%, transparent);
-  --sw-press: color-mix(in srgb, var(--sw-fg) 9%, transparent);
+  --sw-hover: color-mix(in srgb, var(--sw-fg) 6%, transparent);
+  --sw-press: color-mix(in srgb, var(--sw-fg) 11%, transparent);
   --sw-ring: color-mix(in srgb, var(--sw-primary) 70%, transparent);
   --sw-line: color-mix(in srgb, var(--sw-fg) 8%, transparent);
-  --sw-fill: color-mix(in srgb, var(--sw-fg) 6%, transparent);
-  --sw-field: color-mix(in srgb, var(--sw-fg) 4.5%, transparent);
+  --sw-fill: color-mix(in srgb, var(--sw-fg) 8%, transparent);
+  --sw-field: color-mix(in srgb, var(--sw-fg) 6.5%, transparent);
   /* Type */
   --sw-font: var(--font-family, "Google Sans Flex", "Google Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
   --sw-mono: var(--editor-font-family, "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
@@ -54,12 +54,51 @@
   --col: 760px;
   --inline: max(var(--pad-x), calc((100% - var(--col)) / 2));
 }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --sw-bg: var(--background, #f7f7f8);
+  --sw-card: var(--card, #ffffff);
+  --sw-secondary: var(--secondary, #e6e7e9);
+  --sw-muted: var(--muted, #eff0f1);
+  --sw-fg: var(--foreground, #1d1f21);
+  --sw-fg-2: var(--secondary-foreground, #3d4348);
+  --sw-fg-muted: var(--muted-foreground, #5d676f);
+  --sw-fg-faint: var(--placeholder, #9da5ab);
+  --sw-border: var(--border, rgba(0, 0, 0, 0.08));
+  --sw-card-border: var(--card-border, rgba(0, 0, 0, 0.1));
+  --sw-primary: var(--primary, #007acc);
+  --sw-primary-fg: var(--primary-foreground, #ffffff);
+  --sw-error: var(--error, #cb3d3d);
+  --sw-success: #63984f;
+  --sw-warning: #bca136;
+  --sw-hover: color-mix(in srgb, var(--sw-fg) 5%, transparent);
+  --sw-press: color-mix(in srgb, var(--sw-fg) 9%, transparent);
+  --sw-ring: color-mix(in srgb, var(--sw-primary) 70%, transparent);
+  --sw-line: color-mix(in srgb, var(--sw-fg) 8%, transparent);
+  --sw-fill: color-mix(in srgb, var(--sw-fg) 6%, transparent);
+  --sw-field: color-mix(in srgb, var(--sw-fg) 4.5%, transparent);
+}
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --sw-bg: var(--background, #18181b);
+  --sw-card: var(--card, #202023);
+  --sw-secondary: var(--secondary, #27272a);
+  --sw-muted: var(--muted, #27272a);
+  --sw-fg: var(--foreground, #f4f4f5);
+  --sw-fg-2: var(--secondary-foreground, #d4d4d8);
+  --sw-fg-muted: var(--muted-foreground, #a1a1aa);
+  --sw-fg-faint: var(--placeholder, #71717a);
+  --sw-border: var(--border, rgba(255, 255, 255, 0.1));
+  --sw-card-border: var(--card-border, rgba(255, 255, 255, 0.12));
+  --sw-primary: var(--primary, #388bfd);
+  --sw-primary-fg: var(--primary-foreground, #ffffff);
+  --sw-error: var(--error, #f85149);
   --sw-success: #7aae66;
   --sw-warning: #cab43e;
   --sw-hover: color-mix(in srgb, var(--sw-fg) 6%, transparent);
   --sw-press: color-mix(in srgb, var(--sw-fg) 11%, transparent);
+  --sw-ring: color-mix(in srgb, var(--sw-primary) 70%, transparent);
+  --sw-line: color-mix(in srgb, var(--sw-fg) 8%, transparent);
   --sw-fill: color-mix(in srgb, var(--sw-fg) 8%, transparent);
   --sw-field: color-mix(in srgb, var(--sw-fg) 6.5%, transparent);
 }

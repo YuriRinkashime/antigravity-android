@@ -1384,11 +1384,20 @@ function postedFrames(roster, msgs) {
   return [...out.values()].slice(-MAX_POSTED_FRAMES);
 }
 
+function activeConv(data) {
+  let conv = data?.conversationId || app.config.conversationId || '';
+  if (!conv || !ID_RE.test(conv)) {
+    const swarms = listSwarmDirs();
+    if (swarms && swarms.length > 0) conv = swarms[0].id;
+  }
+  return conv;
+}
+
 const FRAME_EXT = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 app.api('/api/frame', (data) => {
   const notFound = () => new Response('not found', { status: 404 });
-  const conv = data.conversationId || app.config.conversationId || '';
+  const conv = activeConv(data);
   const target = typeof data.path === 'string' ? data.path : '';
   if (!conv || !ID_RE.test(conv) || !target) return notFound();
   const { appData, swarm, remote } = resolve(conv);
@@ -1420,7 +1429,7 @@ app.api('/api/frame', (data) => {
 // Lazy raw-file route for the Raw tab so /api/swarm polls with omitRaw=1 do
 // not re-serialize board.jsonl on every member transcript update.
 app.api('/api/swarm/raw', (data) => {
-  const conv = data.conversationId || app.config.conversationId || '';
+  const conv = activeConv(data);
   if (!conv || !ID_RE.test(conv)) return { conversationId: conv || null, swarm: null, raw: null };
   const { appData, swarm, remote } = resolve(conv);
   if (!swarm) return { conversationId: conv, swarm: null, raw: null };
@@ -1431,7 +1440,7 @@ app.api('/api/swarm/raw', (data) => {
 // returns `[offset, before)` validated against `rosterKey` and `beforeSeq`, or
 // `{stale: true}` / `{notFound: true}` when the board or target seq disagrees.
 app.api('/api/swarm/messages', (data) => {
-  const conv = data.conversationId || app.config.conversationId || '';
+  const conv = activeConv(data);
   if (!conv || !ID_RE.test(conv)) return { conversationId: conv || null, swarm: null, messages: [] };
   const { appData, swarm, remote } = resolve(conv);
   if (!swarm) return { conversationId: conv, swarm: null, messages: [] };
@@ -1446,7 +1455,7 @@ app.api('/api/swarm/messages', (data) => {
 // for Overview/Members), and ?since=<headSeq>&known=<totalMsgCount>&rosterKey=<key>
 // (returns delta:true with only newly appended messages when prefix and roster match).
 app.api('/api/swarm', (data) => {
-  const conv = data.conversationId || app.config.conversationId || '';
+  const conv = activeConv(data);
   if (!conv || !ID_RE.test(conv)) return { conversationId: conv || null, swarm: null, member: null };
   const { appData, swarm, member, remote } = resolve(conv);
   if (!swarm) return { conversationId: conv, swarm: null, member: null };
