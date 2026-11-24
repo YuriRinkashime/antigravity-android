@@ -62,6 +62,15 @@ def stage_assets(staging_dir, no_bypass=False):
     shutil.copytree(env_src, env_dst)
     print(f"[OK] Staged env assets.")
 
+    plugins_src = os.path.join(PROJECT_ROOT, "plugins")
+    plugins_dst = os.path.join(assets_dir, "plugins")
+    if os.path.isdir(plugins_src):
+        print(f"[*] Staging plugins assets from {plugins_src} -> {plugins_dst}...")
+        if os.path.exists(plugins_dst):
+            shutil.rmtree(plugins_dst)
+        shutil.copytree(plugins_src, plugins_dst)
+        print(f"[OK] Staged plugins assets.")
+
     print(f"[OK] Staged all assets into {assets_dir}")
     return assets_dir
 

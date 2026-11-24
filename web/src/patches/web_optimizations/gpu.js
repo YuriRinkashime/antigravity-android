@@ -37,6 +37,12 @@ function installGpu(doc) {
         '   flex-direction: column !important; align-items: flex-start !important; gap: 2px !important; }' +
         ' [data-testid^="sidecar-row-"] > span:last-child {' +
         '   white-space: normal !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }' +
+        ' [data-side-panel-open], [data-testid="aux-pane-split"], [data-side-panel-body] {' +
+        '   width: 100% !important; max-width: 100vw !important; }' +
+        ' [data-testid="side-panel-sash"], .side-panel-sash {' +
+        '   display: none !important; }' +
+        ' iframe[src*="swarm"], iframe[data-sidecar="swarm_board"] {' +
+        '   width: 100% !important; height: 100% !important; border: 0 !important; }' +
         '}';
       (doc.head || doc.documentElement).appendChild(gpu);
     }

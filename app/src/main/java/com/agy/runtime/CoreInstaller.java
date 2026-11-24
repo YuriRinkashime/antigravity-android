@@ -67,6 +67,17 @@ public final class CoreInstaller {
         rm.writeNetworkConfig();
         rm.startNetworkMonitor();
         OnboardingSeeder.seed(ctx, rm.getAppDataDir(), rm.getProjectsDir());
+        // Ensure builtin plugins (like Swarm) are extracted/synced into the app's builtin plugins dir
+        try {
+            File pluginsDir = new File(rm.getAppDataDir(), "builtin/plugins");
+            String[] pluginAssets = ctx.getAssets().list("plugins");
+            if (pluginAssets != null && pluginAssets.length > 0) {
+                AssetUnpacker.copyTree(ctx.getAssets(), "plugins", pluginsDir);
+                Log.i(TAG, "synced builtin plugins into " + pluginsDir);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "cannot sync builtin plugins: " + e.getMessage());
+        }
         // Always ensure fallback shells and open-url shims are installed
         // in runtime/bin immediately regardless of whether the bionic prefix is extracted.
         ShellBridgeInstaller.installFallbackBridges(rm.getBinDir(), ctx);

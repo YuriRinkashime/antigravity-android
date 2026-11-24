@@ -27,6 +27,10 @@ public final class WebViewFactory {
         // layer forces Android RenderNode to allocate an extra full-screen FBO texture
         // and perform an unnecessary extra blit at 120Hz, causing severe GPU stalls.
         view.setLayerType(View.LAYER_TYPE_NONE, null);
+        // Delegate overscroll to web CSS (contain) and eliminate double scrollbar draws on UI thread
+        view.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        view.setVerticalScrollBarEnabled(false);
+        view.setHorizontalScrollBarEnabled(false);
         view.addJavascriptInterface(bridge, "Android");
         // Android WebView needs an explicit focus grant for the soft keyboard to show.
         view.setOnTouchListener(new View.OnTouchListener() {
