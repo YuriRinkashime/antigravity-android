@@ -41,6 +41,18 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 
 ---
 
+### App Previews
+
+<div align="center">
+
+| Voice Mode | MCP Diagnostics | Settings & Permissions | Swarm Graph | Swarm Hive |
+| :---: | :---: | :---: | :---: | :---: |
+| <a href="https://imgdb.xyz/i/g-1M6E3acin09RuP7zUigBo6OKSWJVtoYWk"><img src="https://imgdb.xyz/i/g-1M6E3acin09RuP7zUigBo6OKSWJVtoYWk" width="180" alt="Voice Mode" /></a> | <a href="https://imgdb.xyz/i/g2-15x9ewOiwjB6oxSzw2iu5hFlliLupDPxb"><img src="https://imgdb.xyz/i/g2-15x9ewOiwjB6oxSzw2iu5hFlliLupDPxb" width="180" alt="MCP Server Diagnostics" /></a> | <a href="https://imgdb.xyz/i/g3-1ekk0GP7AKW0UPlB5STQu81uqlZWb-CqA"><img src="https://imgdb.xyz/i/g3-1ekk0GP7AKW0UPlB5STQu81uqlZWb-CqA" width="180" alt="Settings & Permissions" /></a> | <a href="https://imgdb.xyz/i/g-1s82UC9t0Peejv2dhFwDcT6pvURIN1Em6"><img src="https://imgdb.xyz/i/g-1s82UC9t0Peejv2dhFwDcT6pvURIN1Em6" width="180" alt="Swarm Mention Graph" /></a> | <a href="https://imgdb.xyz/i/g2-1vvqupiXqXysWBd_Ds-IRe-ruWKXT63tX"><img src="https://imgdb.xyz/i/g2-1vvqupiXqXysWBd_Ds-IRe-ruWKXT63tX" width="180" alt="Swarm Hive View" /></a> |
+
+</div>
+
+---
+
 ### Highlights in v2.4
 
 * **Modular Core:** Clean separation into 6 standalone subsystems (`modules/*`) with independent test suites.
