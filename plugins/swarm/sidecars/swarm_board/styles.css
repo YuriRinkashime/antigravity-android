@@ -103,8 +103,16 @@
   --sw-field: color-mix(in srgb, var(--sw-fg) 6.5%, transparent);
 }
 
-* { box-sizing: border-box; }
-html { background: var(--sw-bg); }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  background: var(--sw-bg);
+  -webkit-tap-highlight-color: transparent;
+}
 body {
   margin: 0;
   font-family: var(--sw-font);
@@ -114,12 +122,20 @@ body {
   background: var(--sw-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 .hidden { display: none !important; }
 .spacer { flex: 1 1 auto; }
-button, input, select { font: inherit; color: inherit; }
+button, input, select, textarea, a, [role="tab"], [role="button"], .tab {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
 button { cursor: pointer; }
 :focus { outline: none; }
+:focus:not(:focus-visible) { outline: none; }
+:active { outline: none !important; }
 :focus-visible { outline: 2px solid var(--sw-ring); outline-offset: 1px; }
 ::selection { background: color-mix(in srgb, var(--sw-primary) 30%, transparent); }
 

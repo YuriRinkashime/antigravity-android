@@ -1,6 +1,17 @@
 /* Swarm pane Overview and Members views (hive.js). Colors come from the host
    theme through the plugin's --sw-* tokens (styles.css). */
-.pane.embedded { display: block; font-family: var(--sw-font); color: var(--sw-fg); }
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+.pane.embedded { display: block; font-family: var(--sw-font); color: var(--sw-fg); -webkit-tap-highlight-color: transparent; }
+.pane :is(button, a, input, select, .o2-btn, .o2-more, .o2-m, .o2-tile, .o2-h, .o2-progh, .o2-thh, .o2-ask, .o2-rexp, .o2-rscrub, .o2-mrow, .o2-mret, .o2-sttag, .b, .hv-row, .hv-bee, .hv-cell) {
+  -webkit-tap-highlight-color: transparent;
+}
+.pane :is(button, a, input, select, .o2-btn, .o2-more, .o2-m, .o2-tile, .o2-h, .o2-progh, .o2-thh, .o2-ask, .o2-rexp, .o2-rscrub, .o2-mrow, .o2-mret, .o2-sttag, .b, .hv-row, .hv-bee, .hv-cell):active {
+  outline: none !important;
+}
 
 /* Pixel bees: two canvases per bee (wing frames), integer-scaled by --cell. */
 .pane .beebox { position:relative; display:block; --cell:5px; width:110px; height:90px; }

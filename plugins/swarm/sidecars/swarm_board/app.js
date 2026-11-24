@@ -3217,7 +3217,8 @@
   function buildSrcdoc(html, payload) {
     const tokens = themeTokens();
     const css = `:root{${Object.entries(tokens).map(([k, v]) => `${k}:${v}`).join(';')};color-scheme:${scheme()}}` +
-        'html,body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-family,system-ui,sans-serif)}';
+        '*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}' +
+        'html,body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-family,system-ui,sans-serif);-webkit-tap-highlight-color:transparent}';
     // JSON in a <script> block: no "</script", no line separators.
     const data = JSON.stringify(payload).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
     const boot = ov.bootstrap.replace(/<\/(script)/gi, '<\\/$1');
