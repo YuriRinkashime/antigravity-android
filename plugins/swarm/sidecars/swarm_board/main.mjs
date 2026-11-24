@@ -1335,10 +1335,26 @@ function readRawFiles(appData, id, remote) {
 
 const app = new SidecarApp();
 
-app.page('/', () => readFileSync(join(__dirname, 'index.html'), 'utf-8'));
+app.page('/', () => {
+  let html = readFileSync(join(__dirname, 'index.html'), 'utf-8');
+  try {
+    const styles = readFileSync(join(__dirname, 'styles.css'), 'utf-8');
+    const hive = readFileSync(join(__dirname, 'hive.css'), 'utf-8');
+    html = html.replace('<link rel="stylesheet" href="/styles.css">', `<style data-inline="styles">\n${styles}\n</style>`);
+    html = html.replace('<link rel="stylesheet" href="/hive.css">', `<style data-inline="hive">\n${hive}\n</style>`);
+    html = html.replace('<script src="/preload.js"></script>', '');
+  } catch (err) {
+    console.error('Failed to inline styles:', err);
+  }
+  return html;
+});
 
 for (const [route, [file, type]] of Object.entries(STATIC)) {
-  app.api(route, () => new Response(readFileSync(join(__dirname, file), 'utf-8'), { contentType: type }), 'GET');
+  const handler = () => new Response(readFileSync(join(__dirname, file), 'utf-8'), { contentType: type });
+  app.api(route, handler, 'GET');
+  if (route.startsWith('/')) {
+    app.api(route.slice(1), handler, 'GET');
+  }
 }
 
 // Progress reel frames: images the narrator listed in view.json `reel.frames`

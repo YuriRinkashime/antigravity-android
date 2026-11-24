@@ -7,7 +7,10 @@
        navigating itself (its srcdoc load is exempt). See app.js. -->
   <meta http-equiv="Content-Security-Policy" content="frame-src 'none'; child-src 'none'">
   <title>Swarm</title>
-  <script src="/preload.js"></script>
+  <style>
+    .hidden { display: none !important; }
+    [hidden] { display: none !important; }
+  </style>
   <!-- Google Sans Flex (the Hub's UI face, same axes as the Hub) and Google Sans Code. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
