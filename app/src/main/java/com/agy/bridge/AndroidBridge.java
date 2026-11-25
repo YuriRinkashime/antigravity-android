@@ -148,6 +148,17 @@ public final class AndroidBridge {
         com.agy.gateway.handlers.NotificationHandler.postAgentAlert(appContext, tag, title, body);
     }
 
+    /** Reads an image URI from Android's clipboard for scripts holding the top-level token. */
+    @JavascriptInterface
+    public String readClipboardImage(String token) {
+        if (!matchesNativeBridgeToken(token)) {
+            return "";
+        }
+        com.agy.ui.webview.ClipboardImageReader.ImageData img =
+                com.agy.ui.webview.ClipboardImageReader.readFromClipboard(appContext);
+        return img != null ? img.toJson().toString() : "";
+    }
+
     /** Saves a downloaded blob only for scripts holding the top-level document token. */
     @JavascriptInterface
     public void saveBlob(String token, String base64Data, String filename, String mimeType) {
