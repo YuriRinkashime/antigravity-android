@@ -139,11 +139,11 @@ public final class RuntimeManager {
         cmd.add(RuntimePaths.APP_DATA_DIR_NAME);
         cmd.add("--web_bundle_path");
         cmd.add(getWebDir().getAbsolutePath());
-        if (CoreEnvironment.isSidecarsSupported(appContext)) {
-            Log.i(TAG, "Device hardware meets requirements; enabling sidecars (Automations)");
+        if (TokenSaverPrefs.isSidecarsEnabled(appContext) && CoreEnvironment.isSidecarsSupported(appContext)) {
+            Log.i(TAG, "Sidecars enabled by user preference; passing --enable_sidecars");
             cmd.add("--enable_sidecars");
         } else {
-            Log.i(TAG, "Device hardware is constrained; sidecars disabled for stability");
+            Log.i(TAG, "Token-Saver mode: background sidecars disabled (opt-in via QuickControlSheet)");
         }
 
         return cmd.toArray(new String[0]);

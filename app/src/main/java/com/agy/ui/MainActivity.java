@@ -266,6 +266,7 @@ public class MainActivity extends Activity
         if (quickControlSheet != null) {
             quickControlSheet.attachPill();
         }
+        UpdateChecker.checkOnLaunch(this);
     }
 
     public boolean isDesktopMode() {

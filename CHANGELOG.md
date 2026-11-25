@@ -6,6 +6,23 @@ For earlier upstream release history (`v2.33.0`, `v2.4.1`, and prior), see [`REL
 
 ---
 
+## [v2.34.15] - 2026-11-25
+
+### Added
+* **Auto-Check Updates (`UpdateChecker`):** Automatically checks `YuriRinkashime/antigravity-android` for newer GitHub Releases on launch (throttled to once every 6 hours, with Skip & Changelog preview), plus a manual **Check for Updates (GitHub)** button in `QuickControlSheet`.
+* **Chat Image Paste (`AgyWebView`, `ClipboardImageReader`, `clipboard_image_paste.js`):** Paste images and screenshots directly into chats from Gboard / Samsung Keyboard (`commitContent`) or Android's clipboard.
+* **Token-Saver Suite (`TokenSaverPrefs`, `token_saver.js`):**
+  * **Background Sidecars OFF by Default:** Prevents background Automations (`--enable_sidecars`) from silently burning quota unless explicitly toggled ON in `QuickControlSheet`.
+  * **Double-Tap Send Deduplication & Long-Chat `/compact` Warning:** Blocks accidental duplicate rapid send RPCs and shows a dismissible `/compact` reminder when a conversation grows large.
+* **Maintainer Credits:** Added clickable **YuriRinkashime** credits in `QuickControlSheet` and `README.md`.
+
+### Changed & Fixed
+* **75% Smaller `AGENTS.md` (10.1 KB → 2.5 KB):** Trimmed global prompt rules injected into every conversation turn, with safe automatic migration of unmodified legacy stock `AGENTS.md` in `OnboardingSeeder` (backed up to `AGENTS.md.legacy.bak`).
+* **Eliminated 30× Blind LLM RPC Retries (`fetch-rewrite.js`):** Set `0` automatic retries on mutating/streaming LLM RPCs (`Send*`, `Start*`, `Stream*`, `Chat*`) to prevent duplicate turns and wasted quota on spotty mobile networks, and widened stream recovery debounce to 3s.
+* **English-Only UI & Docs:** Removed `README.ru.md` + language switcher and translated all remaining Russian download messages in `FileDownloader.java` to English.
+
+---
+
 ## [v2.34.14] - 2026-11-25
 
 ### Added

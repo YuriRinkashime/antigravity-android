@@ -13,7 +13,7 @@
 
   [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://android.com)
   [![Arch](https://img.shields.io/badge/ARM64-v8.0--A%2B-blue?style=flat-square)](https://arm.com)
-  [![Release](https://img.shields.io/badge/Version-2.34.14-blueviolet?style=flat-square)](https://github.com/YuriRinkashime/antigravity-android/releases)
+  [![Release](https://img.shields.io/badge/Version-2.34.15-blueviolet?style=flat-square)](https://github.com/YuriRinkashime/antigravity-android/releases)
   [![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)](LICENSE)
 
   <br/>
@@ -63,6 +63,7 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 
 | Version | Highlights |
 | :--- | :--- |
+| **`v2.34.15`** | **Auto-Check Updates** (`YuriRinkashime/antigravity-android`), **Token-Saver optimizations** (75% smaller `AGENTS.md`, sidecars OFF by default, 0× retries on LLM sends, double-tap dedupe, long-chat `/compact` warning), **Chat Image Paste**, **English-only UI**, and **YuriRinkashime** credits. |
 | **`v2.34.14`** | 1-tap portable `.zip` **Backup & Restore** of local chats, brain artifacts, and rules (`StateBackupManager`, `QuickControlSheet`, `agy-sys backup/restore`). |
 | **`v2.34.13`** | **Crash & Anti-Kill Resilience** (`RootResilience` Doze whitelist + OOM protection, `FileDownloader` 64 MiB leak fix, `GODEBUG=netdns=cgo` for Go CLIs), draggable **`AGY` Quick-Control Sheet**, **`agy-sys`** root CLI, and **clickable background agent notifications**. |
 | **`v2.34.12`** | Initial Root Edition: native **`RootBridge`** (KernelSU / bakaSU / Magisk / APatch + `-mm`), **`agy-root` / `sudo` / `su`** wrappers, **`RootNoticeBanner`** (KernelSU/bakaSU & Sui setup guidance), **`GIT_SSL_CAINFO`** fix, and WebView stream auto-recovery. |

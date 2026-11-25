@@ -22,6 +22,7 @@ import android.widget.Toast;
 
 import com.agy.core.CoreRuntimeState;
 import com.agy.runtime.RuntimeConfig;
+import com.agy.runtime.TokenSaverPrefs;
 import com.agy.shell.RootBridge;
 import com.agy.shell.RootManagerInfo;
 import com.agy.shell.RootResilience;
@@ -317,6 +318,31 @@ public final class QuickControlSheet {
             public void onClick(View v) {
                 closeSheet();
                 activity.restartCoreFromUser();
+            }
+        }));
+
+        final boolean sidecarsOn = TokenSaverPrefs.isSidecarsEnabled(activity);
+        card.addView(makeSheetButton(
+                "Background Sidecars: " + (sidecarsOn ? "ON (uses extra tokens)" : "OFF (Token-Saver)"),
+                btnBg, titleCol, borderCol, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        boolean next = !TokenSaverPrefs.isSidecarsEnabled(activity);
+                        TokenSaverPrefs.setSidecarsEnabled(activity, next);
+                        closeSheet();
+                        Toast.makeText(activity,
+                                next ? "Background sidecars enabled; restarting core..."
+                                     : "Token-Saver enabled (sidecars OFF); restarting core...",
+                                Toast.LENGTH_LONG).show();
+                        activity.restartCoreFromUser();
+                    }
+                }));
+
+        card.addView(makeSheetButton("Check for Updates (GitHub)", btnBg, accentCol, borderCol, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                closeSheet();
+                UpdateChecker.checkManually(activity);
             }
         }));
 

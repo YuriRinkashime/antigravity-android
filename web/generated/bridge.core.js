@@ -261,6 +261,20 @@ function rpcPathFrom(url) {
 function installFetchRewrite() {
   if (global.__AG_FETCH_REWRITE__ || typeof global.fetch !== 'function') return;
   var origFetch = global.fetch.bind(global);
+  var bootStartedAt = Date.now();
+
+  // Never blindly retry mutating or streaming LLM RPCs (prevents duplicate turns & token burn).
+  var NON_RETRYABLE_RE = /(?:^|\/)(?:Send|Start|Stream|Run|Cancel|Delete|Update|Create|Accept|Reject|Respond|Upload|Revert|Proceed|Execute|Generate|Complete|Chat|Invoke|Trigger)/i;
+
+  function maxRetriesForRpc(rpath) {
+    if (!rpath) return 0;
+    var methodPart = String(rpath).split('/').pop() || '';
+    if (NON_RETRYABLE_RE.test(methodPart)) {
+      return 0;
+    }
+    var withinBootWindow = (Date.now() - bootStartedAt) < 20000;
+    return withinBootWindow ? 8 : 1;
+  }
 
   function isAbortedError(opts, err) {
     if (opts && opts.signal && opts.signal.aborted) return true;
@@ -273,7 +287,7 @@ function installFetchRewrite() {
       if (isAbortedError(opts, err) || retries <= 0) {
         throw err;
       }
-      var delayMs = Math.min(800, 120 + step * 60);
+      var delayMs = Math.min(800, 120 + step * 80);
       return new Promise(function (resolve, reject) {
         setTimeout(function () {
           if (opts && opts.signal && opts.signal.aborted) {
@@ -323,7 +337,7 @@ function installFetchRewrite() {
               } else if (resource.signal) {
                 nextOpts.signal = resource.signal;
               }
-              return fetchWithStartupRetry(targetUrl, nextOpts, 30, 0);
+              return fetchWithStartupRetry(targetUrl, nextOpts, maxRetriesForRpc(rpath), 0);
             });
           } catch (e) { warn('fetch rewrite (Request)', e); }
         }
@@ -345,7 +359,7 @@ function installFetchRewrite() {
           }
           next.headers = headers;
 
-          return fetchWithStartupRetry(url, next, 30, 0);
+          return fetchWithStartupRetry(url, next, maxRetriesForRpc(path), 0);
         }
       }
     } catch (e) { warn('fetch rewrite', e); }
@@ -402,7 +416,7 @@ function installResumeHandler() {
 
     function triggerStreamRecovery(reason) {
       var now = Date.now();
-      if (now - lastRecoveryAt < 600) return;
+      if (now - lastRecoveryAt < 3000) return;
       lastRecoveryAt = now;
       try {
         global.dispatchEvent(new Event('focus'));

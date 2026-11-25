@@ -31,9 +31,10 @@ public final class OnboardingSeeder {
                     new File(appData, "antigravity_state.pbtxt"));
 
             // Seed default agent rules (AGENTS.md) into ~/.gemini/config/AGENTS.md
+            // and safely upgrade bloated stock v2.x AGENTS.md to the lean token-saving version.
             File configDir = projects.getParentFile();
             if (configDir != null && (configDir.isDirectory() || configDir.mkdirs())) {
-                seedStateFile(appContext, "AGENTS.md", new File(configDir, "AGENTS.md"));
+                seedOrCompactAgentsFile(appContext, new File(configDir, "AGENTS.md"));
             }
 
             // The project store resolves its projects here; without the
@@ -90,5 +91,37 @@ public final class OnboardingSeeder {
             AtomicFileWriter.writeText(target, content);
         }
         Log.i(TAG, "seeded onboarding state (was missing): " + target);
+    }
+
+    /**
+     * Seeds AGENTS.md if absent, and auto-upgrades unmodified bloated stock AGENTS.md
+     * (>4 KB legacy template) to the lean token-optimized ruleset (backing up old copy).
+     */
+    private static void seedOrCompactAgentsFile(Context appContext, File target) throws Exception {
+        if (!target.isFile() || target.length() == 0) {
+            seedStateFile(appContext, "AGENTS.md", target);
+            return;
+        }
+        if (target.length() > 4000) {
+            try (InputStream existingIn = new java.io.FileInputStream(target)) {
+                String existing = com.agy.util.IoUtil.readAll(existingIn, "UTF-8");
+                if (existing.startsWith("# Antigravity Android Agent Rules")
+                        && existing.contains("## 7. Project Architecture & Sync Rules")) {
+                    File backup = new File(target.getParentFile(), "AGENTS.md.legacy.bak");
+                    if (!backup.exists()) {
+                        AtomicFileWriter.writeText(backup, existing);
+                    }
+                    try (InputStream in = appContext.getAssets().open(
+                            RuntimePaths.SEED_ASSET + "/AGENTS.md")) {
+                        String lean = com.agy.util.IoUtil.readAll(in, "UTF-8");
+                        AtomicFileWriter.writeText(target, lean);
+                        Log.i(TAG, "migrated stock AGENTS.md (" + existing.length()
+                                + "B -> " + lean.length() + "B) for token optimization");
+                    }
+                    return;
+                }
+            }
+        }
+        Log.i(TAG, "AGENTS.md present; left untouched: " + target);
     }
 }
