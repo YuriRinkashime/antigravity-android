@@ -63,6 +63,18 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 
 ---
 
+### Changelog
+
+| Version | Highlights |
+| :--- | :--- |
+| **`v2.34.14`** | 1-tap portable `.zip` **Backup & Restore** of local chats, brain artifacts, and rules (`StateBackupManager`, `QuickControlSheet`, `agy-sys backup/restore`). |
+| **`v2.34.13`** | **Crash & Anti-Kill Resilience** (`RootResilience` Doze whitelist + OOM protection, `FileDownloader` 64 MiB leak fix, `GODEBUG=netdns=cgo` for Go CLIs), draggable **`AGY` Quick-Control Sheet**, **`agy-sys`** root CLI, and **clickable background agent notifications**. |
+| **`v2.34.12`** | Initial Root Edition: native **`RootBridge`** (KernelSU / bakaSU / Magisk / APatch + `-mm`), **`agy-root` / `sudo` / `su`** wrappers, **`RootNoticeBanner`** (KernelSU/bakaSU & Sui setup guidance), **`GIT_SSL_CAINFO`** fix, and WebView stream auto-recovery. |
+
+See full history in **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+
+---
+
 ### Key Features
 
 * **Autonomous Agent:** Plans tasks, edits code across project trees, executes shell tools, and fixes build errors.

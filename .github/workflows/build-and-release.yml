@@ -120,6 +120,61 @@ jobs:
             dist/antigravity-region-bypass.apk
             dist/SHA256SUMS.txt
 
+      - name: Generate Release Changelog from RELEASE_NOTES.md
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        env:
+          REL_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, re
+          tag = os.environ.get("REL_TAG", "").strip()
+          ver = tag.lstrip("v")
+          notes = open("RELEASE_NOTES.md", encoding="utf-8").read()
+          sections = re.split(r'(?m)^(?=# Antigravity for Android )', notes)
+          chosen = ""
+          for s in sections:
+              if ver and f"v{ver}" in s.splitlines()[0]:
+                  chosen = s.strip()
+                  break
+          if not chosen:
+              for s in sections:
+                  if s.strip().startswith("# "):
+                      chosen = s.strip()
+                      break
+          header = f"""<div align="center">
+            <h3>Antigravity for Android {tag}</h3>
+            <p>Autonomous AI Coding Environment &bull; Native Root (KernelSU/bakaSU/Magisk/APatch) &bull; ARM64</p>
+          </div>
+
+          ---
+
+          ### Packages & Artifacts
+
+          | Package | Description |
+          | :--- | :--- |
+          | **`antigravity.apk`** | Standard production release with native bionic engine (`com.agy`, port `45157`) |
+          | **`antigravity-region-bypass.apk`** | Region bypass edition with account eligibility check bypass (`com.agy`, port `45157`) |
+          | **`SHA256SUMS.txt`** | Cryptographic checksums for package integrity verification |
+
+          ---
+
+          """
+          footer = """
+
+          ---
+
+          ### Root & Sui Setup
+          * **KernelSU / bakaSU / KernelSU-Next / SukiSU:** Grant Superuser to **Antigravity (`com.agy`)** in your root manager, then restart the app.
+          * **Sui Module:** Allow **Antigravity (`com.agy`)** in Sui / Shizuku Manager, then restart the app.
+          * **Magisk / APatch:** Grant the Superuser prompt in your manager app.
+
+          > [!NOTE]
+          > **Seamless Upgrades:** Signed with the shared upstream keystore (`com.agy`). You can install this update directly over previous v2.x releases without uninstalling or losing chats, settings, or root grants. Full history in [`RELEASE_NOTES.md`](https://github.com/YuriRinkashime/antigravity-android/blob/main/RELEASE_NOTES.md).
+          """
+          with open("dist/RELEASE_BODY.md", "w", encoding="utf-8") as f:
+              f.write(header + chosen + footer)
+          PYEOF
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -133,37 +188,4 @@ jobs:
             dist/antigravity.apk
             dist/antigravity-region-bypass.apk
             dist/SHA256SUMS.txt
-          body: |
-            <div align="center">
-              <h3>Antigravity for Android</h3>
-              <p>Autonomous AI Coding Environment &bull; Native Bionic Userspace &bull; ARM64</p>
-            </div>
-
-            ---
-
-            ### Packages & Artifacts
-
-            | Package | Description |
-            | :--- | :--- |
-            | **`antigravity.apk`** | Standard production release with native bionic engine (com.agy, port 45157) |
-            | **`antigravity-region-bypass.apk`** | Region bypass edition with account eligibility check bypass (com.agy, port 45157) |
-            | **`SHA256SUMS.txt`** | Cryptographic checksums for package integrity verification |
-
-            ---
-
-            ### Key Highlights in this Release
-
-            * **Built-in Web Terminal & PTY Support (PR #19):** Enabled native built-in web terminal on Android userspace via length-preserving PTY shell binary patching (`/bin/bash` -> `/bin///sh`), resilient prioritized shell fallback hierarchy (`$PREFIX/bin/bash` -> `runtime/bin/bash` -> `/system/bin/sh`), and proper `TERM=xterm-256color` / `TERMINFO` environment configuration.
-            * **AAPT Build Reliability:** Fixed `aapt` crash with `SIGABRT (134)` on Android ARM64 userspace builds by ensuring `ANDROID_DATA` environment export.
-            * **Security Hardening (Issue #6):** Completely removed hardcoded `android:debuggable="true"` from production builds, preventing unauthorized access to OAuth credentials and internal user files via `run-as`. Dev builds now isolate debuggable flags to `--dev` builds.
-            * **Media & File Picker Overhaul (Issue #8):** Replaced SAF-only document picker with universal native Android chooser. Users can now attach photos, videos, and files directly from Gallery, Google Photos, or File Managers with automatic persistent URI permissions.
-            * **OAuth & Browser Redirection Streamlined:** Completely eliminated 80ms disk polling and temporary files. Direct stdout capture and clean native browser intent dispatching without AIDL overhead or IPC deadlocks.
-            * **ARMv8.0-A CPU Architecture & SIMD Emulation:** Added transparent atomic & SIMD emulation (`liblse_compat.so`) for FEAT_LSE, FEAT_RDM, and FEAT_FCMA, resolving `FATAL ERROR: This binary was compiled with lse enabled` and `SIGILL` crashes on Snapdragon 685 (Cortex-A53 / Redmi Note 12).
-            * **Torch / Flashlight Hardware Bridge:** Integrated hardware torch control bridge and CLI utility (`torch on/off`).
-            * **Integrated Log Export & Diagnostics:** Added "Copy Logs" and "Save Logs" actions to the startup failure splash overlay for one-tap troubleshooting.
-            * **Autonomous Background Micro-Daemon (`agy-daemon`):** Background task engine with triggers for delays, intervals, file watching, and GitHub notifications.
-
-            ---
-
-            > [!NOTE]
-            > **Seamless Upgrades:** Built with the consistent embedded signing keystore. You can install this update directly over previous v2.x releases without uninstalling or losing local projects.
+          body_path: dist/RELEASE_BODY.md
