@@ -143,6 +143,13 @@ antigravity/
 
 ---
 
+### Credits
+
+* **Maintainer (Root Edition):** [YuriRinkashime](https://github.com/YuriRinkashime) — Native Root (`RootBridge`, KernelSU / bakaSU / Magisk / APatch & Sui support), `QuickControlSheet`, Anti-Kill Resilience (`RootResilience`), Portable Backup & Restore (`StateBackupManager`), `agy-root` / `sudo` / `agy-sys` CLI tools, and clickable background notifications.
+* **Upstream Authors:** [werdio325-png](https://github.com/werdio325-png/antigravity-android) (original Antigravity for Android) and [salmanbappi](https://github.com/salmanbappi/antigravity-android) (core v2.34 / `/swarm` updates).
+
+---
+
 <div align="center">
   <sub>Licensed under the <a href="LICENSE">Apache 2.0 License</a></sub>
 </div>

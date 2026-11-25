@@ -1,10 +1,12 @@
 package com.agy.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
@@ -365,6 +367,26 @@ public final class QuickControlSheet {
             }
         });
         card.addView(hideBtn);
+
+        TextView creditView = new TextView(activity);
+        creditView.setText("Root Edition by YuriRinkashime  •  GitHub");
+        creditView.setTextColor(accentCol);
+        creditView.setAlpha(0.85f);
+        creditView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        creditView.setGravity(Gravity.CENTER);
+        creditView.setPadding(dp(8), dp(6), dp(8), dp(2));
+        creditView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/YuriRinkashime/antigravity-android"));
+                    activity.startActivity(intent);
+                } catch (Throwable ignored) {
+                }
+            }
+        });
+        card.addView(creditView);
 
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(card);
