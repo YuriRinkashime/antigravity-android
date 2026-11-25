@@ -124,7 +124,8 @@ graph TD
 | `system_info` | `DeviceHandler` | Сбор телеметрии: уровень заряда батареи, статус зарядки, тип сети, свободная память и диск. |
 | `vibrate` | `DeviceHandler` | Тактильный отклик (Haptic Feedback) заданной длительности. |
 | `toast` | `DeviceHandler` | Отображение нативных всплывающих сообщений (Toast). |
-| `exec` | `ExecHandler` | Выполнение команд в шелле (`/system/bin/sh` или повышенный `rish` через Shizuku) с таймаутом и захватом потоков. |
+| `exec` | `ExecHandler` | Выполнение команд в шелле (`/system/bin/sh`, `rish` через Shizuku или `root=true` / `mount_master=true` через `RootBridge` с опциональным `fallback_rish=true`), с таймаутом и захватом потоков. |
+| `root_status` | `GatewayDispatcher` / `RootBridge` | Динамическая проверка root (`su`, KernelSU/bakaSU/Magisk/APatch), поддержка `-mm` и подсказки по выдаче прав (KernelSU/bakaSU и Sui). |
 | `/gateway/status` | `SystemGatewayServer` | Проверка состояния шлюза (health check). |
 | `/gateway/logs` | `SystemGatewayServer` | Чтение последних строк системного лога из кольцевого буфера памяти. |
 | `/gateway/commands` | `SystemGatewayServer` | История выполненных шлюзом команд и их статусов. |

@@ -1,3 +1,15 @@
+# Antigravity for Android v2.34.12
+
+## Release Highlights (Root Support, Git TLS Fix & Stream Recovery)
+
+* **Native Root Bridge (`RootBridge` & `RootManagerInfo`):** Dynamic `uid=0` probing compatible with **KernelSU / bakaSU / KernelSU-Next / SukiSU**, **Magisk**, and **APatch**, with global mount namespace (`-mm`), gateway `root_status` endpoint, and `exec(root=true, mount_master=true, fallback_rish=true)`.
+* **Smart CLI Wrappers (`agy-root`, `sudo`, `su`):** Installed in `$PREFIX/bin` and isolated from Bionic `LD_LIBRARY_PATH` in `ShellBridgeInstaller` (`BRIDGE_FORMAT=4`) so Android system tools (`pm`, `am`, `ksud`, `iptables`) and AGY tools (`python`, `git`, `pkg`) both work seamlessly as root.
+* **In-App Root / Sui Guidance (`RootNoticeBanner`):** Dismissible dark/light themed banner shown only when root is not granted, instructing KernelSU / bakaSU users to grant Superuser & restart and Sui module users to allow Antigravity in Sui / Shizuku & restart.
+* **Git HTTPS TLS Fix:** Exported `GIT_SSL_CAINFO="$PREFIX/etc/tls/cert.pem"` and `GIT_CONFIG_NOSYSTEM=1` across `CoreEnvironment`, `ShellBridgeInstaller`, and `ExecHandler`.
+* **Stream Auto-Recovery:** `NetworkMonitorHolder` wakes the WebView on network recovery (`agy:network-online`), paired with `AbortSignal`-aware retry backoff in `web/src/core/fetch-rewrite.js`.
+
+---
+
 # Antigravity for Android v2.33.0
 
 ## Спецификация пакетов релиза

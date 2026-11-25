@@ -8,17 +8,16 @@
 
   <img src="docs/assets/logo.png" alt="Antigravity" width="88" height="88" style="border-radius: 20px;" />
 
-  # Antigravity for Android
+  # Antigravity for Android (Root-Enhanced Fork)
 
-> [!WARNING]
-> **Проект временно приостановлен на несколько месяцев из-за занятости разработчика.**  
-> *(Project is temporarily on hold for several months due to developer workload).*
+> [!NOTE]
+> Actively maintained fork of [`salmanbappi/antigravity-android`](https://github.com/salmanbappi/antigravity-android) & [`werdio325-png/antigravity-android`](https://github.com/werdio325-png/antigravity-android) with **native Root (`su`) support** (KernelSU / bakaSU / Magisk / APatch), smart CLI wrappers, Git TLS fixes, and stream auto-recovery.
 
 **Autonomous AI development environment running natively on Android & ARM64.**
 
   [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://android.com)
   [![Arch](https://img.shields.io/badge/ARM64-v8.0--A%2B-blue?style=flat-square)](https://arm.com)
-  [![Release](https://img.shields.io/badge/Version-2.34.11-blueviolet?style=flat-square)](https://github.com/salmanbappi/antigravity-android/releases)
+  [![Release](https://img.shields.io/badge/Version-2.34.12-blueviolet?style=flat-square)](https://github.com/YuriRinkashime/antigravity-android/releases)
   [![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)](LICENSE)
 
   <br/>
@@ -53,33 +52,38 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 
 ---
 
-### Highlights in v2.4
+### Highlights in v2.34.12 (Root Edition)
 
-* **Modular Core:** Clean separation into 6 standalone subsystems (`modules/*`) with independent test suites.
-* **Native Splash:** Canvas-based dot animation saving ~40 MB RAM with instant startup.
-* **Desktop Mode:** Instant toggle in Appearance settings for tablets, external keyboards, and Samsung DeX.
-* **Universal ARMv8.0-A Support:** Built-in transparent atomic & SIMD emulation (`liblse_compat.so`) for older CPUs.
-* **Background Micro-Daemon:** Ultra-lightweight `agy-daemon` (<10 MB RAM) with cron scheduler, file watcher, and AI task queue.
+* **Native Root Access (`RootBridge`, `agy-root`, `sudo`, `su`):** First-class `uid=0` support for **KernelSU / bakaSU / KernelSU-Next / SukiSU**, **Magisk**, and **APatch**, with global mount namespace (`-mm`), preserved `$HOME`/`$PREFIX`/`$PATH` + TLS certs, and automatic `--fallback-rish` fallback.
+* **Smart Root / Sui Setup Guidance:** Built-in [`RootNoticeBanner`](app/src/main/java/com/agy/ui/RootNoticeBanner.java) and CLI diagnostics automatically detect ungranted KernelSU/bakaSU or Sui states and guide users to grant permission & restart.
+* **Out-of-the-Box Git HTTPS:** Bundled `GIT_SSL_CAINFO="$PREFIX/etc/tls/cert.pem"` across `CoreEnvironment`, `ShellBridgeInstaller`, and `ExecHandler`.
+* **Stream Recovery & Auto-Reconnect:** Network change callbacks wake stalled WebView streams with `AbortSignal`-aware retry backoff.
+* **Universal ARMv8.0-A Support & `/swarm`:** Includes ARMv8.0 LSE/SIMD emulation (`liblse_compat.so`), native splash, Desktop Mode, and `agy-daemon`.
 
 ---
 
 ### Key Features
 
 * **Autonomous Agent:** Plans tasks, edits code across project trees, executes shell tools, and fixes build errors.
-* **Elevated Control (Shizuku):** Direct ADB-level operations (`uid=2000`) without root for package installs and system diagnostics.
+* **Elevated Control (Root + Shizuku/Sui):** Full `uid=0` root via `agy-root` / `sudo` (with `-mm` support) plus ADB-level `uid=2000` via Shizuku / Sui (`rish`).
 * **Built-in `pkg` Manager:** Fast package manager installing development runtimes (`git`, `python`, `node`, `clang`) from Termux repos.
 * **Adaptive Viewports:** Seamless touch-first mobile UI with optional desktop layout.
-* **In-Place Upgrades:** Consistent keystore guarantees updating APKs without losing sessions or workspace data.
+* **In-Place Upgrades:** Keeps `com.agy` and consistent keystore so updating APKs preserves sessions, workspace data, and root grants.
 
 ---
 
 ### Quick Start
 
-1. **Download APK** from [Releases](https://github.com/werdio325-png/antigravity-android/releases):
+1. **Download APK** from [Releases](https://github.com/YuriRinkashime/antigravity-android/releases):
    * `antigravity.apk` — standard release (original Google account checks).
    * `antigravity-region-bypass.apk` — release with account eligibility check bypass.
-2. **Grant Storage Permission** (`All Files Access`). *(Optional: enable Shizuku for ADB access)*.
-3. **Install Runtimes** via terminal or agent:
+2. **Grant Storage Permission** (`All Files Access`).
+3. **Optional Root / Sui Setup:**
+   * **KernelSU / bakaSU / KernelSU-Next / SukiSU:** Open your root manager, grant Superuser to **Antigravity (`com.agy`)**, then **restart the app**.
+   * **Sui Module:** Allow **Antigravity (`com.agy`)** in Sui / Shizuku Manager, then **restart the app**.
+   * **Magisk / APatch:** Grant the Superuser prompt in your manager app.
+   * Verify anytime in terminal: `agy-root status`
+4. **Install Runtimes** via terminal or agent:
    ```bash
    pkg update && pkg install git python nodejs
    ```

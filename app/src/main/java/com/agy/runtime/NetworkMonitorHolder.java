@@ -14,13 +14,17 @@ public final class NetworkMonitorHolder {
         this.appContext = context.getApplicationContext();
     }
 
-    /** Registers the default-network callback once; refreshes DNS on changes. */
+    /** Registers the default-network callback once; refreshes DNS and wakes WebView streams on changes. */
     public synchronized void start() {
         if (monitor == null) {
             monitor = new NetworkMonitor(appContext, new NetworkMonitor.Listener() {
                 @Override
                 public void onNetworkChanged() {
                     NetworkConfigWriter.write(appContext);
+                    com.agy.ui.MainActivity act = com.agy.ui.MainActivity.activeActivity;
+                    if (act != null) {
+                        act.notifyNetworkRecovered();
+                    }
                 }
             });
         }

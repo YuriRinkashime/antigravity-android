@@ -40,9 +40,8 @@
 - **Path Quoting:**
   Shared storage paths frequently contain spaces (e.g. `/storage/emulated/0/Documents/antigravity release/`). Always quote file paths in commands.
 - **Git on Android Shared Storage:**
-  Git in `/storage/emulated/0/...` may trigger `fatal: detected dubious ownership`. Always configure safe directory and avoid nonexistent Termux system config:
+  `GIT_SSL_CAINFO` (`$PREFIX/etc/tls/cert.pem`) and `GIT_CONFIG_NOSYSTEM=1` are pre-configured automatically across shell bridges. Git in `/storage/emulated/0/...` may still trigger `fatal: detected dubious ownership` — configure safe directory as needed:
   ```bash
-  export GIT_CONFIG_NOSYSTEM=1
   git config --global --add safe.directory "<path>"
   ```
 
@@ -80,16 +79,39 @@ AGY includes an ultra-fast, native package manager (`pkg`) written in Bash & AWK
 
 ---
 
-## 4. Elevated Operations via Shizuku (`rish`)
+## 4. Elevated Operations: Root (`agy-root` / `sudo`) & Shizuku (`rish`)
 
-The agent has native access to Shizuku's elevated ADB shell (`uid=2000(shell)`):
+### 4.1 Native Root Access (`uid=0` via KernelSU / bakaSU / Magisk / APatch)
+When the device is rooted and Superuser is granted to Antigravity, the agent can run privileged `uid=0` commands with full AGY environment preservation (`$HOME`, `$PREFIX`, `$PATH`, TLS certs) while keeping Android system binaries free of Bionic `LD_LIBRARY_PATH` conflicts:
+- **Check live root status:**
+  ```bash
+  agy-root status
+  agy-root status --json
+  ```
+- **Execute root commands:**
+  ```bash
+  agy-root -c "<command>"
+  sudo <command>
+  # Global mount namespace (KernelSU / bakaSU / Magisk):
+  agy-root -mm -c "<command>"
+  sudo -mm <command>
+  # Automatically fall back to Shizuku (rish) if root is unavailable:
+  agy-root --fallback-rish -c "<command>"
+  ```
+- **If Root Is Not Granted (Always Guide the User Clearly):**
+  - **KernelSU / bakaSU / KernelSU-Next / SukiSU:** KernelSU-based root managers hide `/system/bin/su` until granted. Ask the user to open their KernelSU / bakaSU Manager, grant Superuser access to Antigravity (`com.agy`), and **restart the app**.
+  - **Sui module (Magisk / KernelSU Shizuku module):** Ask the user to allow Antigravity in Sui / Shizuku Manager and **restart the app**.
+  - **Magisk / APatch:** Ask the user to allow Superuser access in Magisk / APatch Manager and retry.
+
+### 4.2 Shizuku / Sui Elevated Shell (`rish`, `uid=2000(shell)`)
+When root is not needed or not granted, the agent has native access to Shizuku's elevated ADB shell (`uid=2000(shell)`):
 - **Executable Location:** `$PREFIX/bin/rish` (invoked via `rish -c "<command>"`).
-- **Service Dependency:** Requires the Shizuku service to be running on the device. If `rish` reports `Server is not running`, ask the user to start Shizuku.
-- **Common Elevated Operations:**
-  1. **Restricted Filesystem Access:** Access files in protected directories (e.g. `/storage/emulated/0/Android/data`):
+- **Service Dependency:** Requires Shizuku or the Sui module to be active and authorized. If `rish` reports `Server is not running` or permission denied, ask the user to start/allow Shizuku or Sui and restart the app.
+- **Common Elevated Operations (work via `agy-root -c` or `rish -c`):**
+  1. **Restricted Filesystem Access:** Access files in protected directories (e.g. `/storage/emulated/0/Android/data` or `/data/adb` with root):
      ```bash
      rish -c "ls -la /storage/emulated/0/Android/data"
-     rish -c "cp <src> <dest>"
+     agy-root -c "ls -la /data/adb/modules"
      ```
   2. **APK & Package Management (`pm`):**
      ```bash

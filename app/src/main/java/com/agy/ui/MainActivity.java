@@ -29,6 +29,7 @@ import com.agy.core.CoreServiceLauncher;
 import com.agy.oauth.OAuthManager;
 import com.agy.oauth.OAuthTokenStore;
 import com.agy.runtime.RuntimeManager;
+import com.agy.shell.RootBridge;
 import com.agy.shell.ShizukuBridge;
 import com.agy.theme.ThemeManager;
 import com.agy.ui.lifecycle.AppLifecycle;
@@ -56,6 +57,7 @@ public class MainActivity extends Activity
     private static final long SPLASH_TIMEOUT_MS = 60000;
     private static final long POLL_STARTUP_INTERVAL_MS = 50;
     private static final long POLL_READY_INTERVAL_MS = 1000;
+    private static final long NETWORK_NOTIFY_DEBOUNCE_MS = 800;
 
     public static volatile MainActivity activeActivity;
 
@@ -66,9 +68,11 @@ public class MainActivity extends Activity
     private OAuthManager oauthManager;
     private RuntimeManager runtimeManager;
     private ShizukuBridge shizukuBridge;
+    private RootBridge rootBridge;
     private AndroidBridge androidBridge;
     private WebViewHost webViewHost;
     private SplashController splash;
+    private RootNoticeBanner rootNoticeBanner;
     private FrameLayout rootLayout;
 
     private boolean appLoaded = false;
@@ -77,6 +81,29 @@ public class MainActivity extends Activity
     private long splashDeadline;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Runnable notifyWebViewNetworkOnline = new Runnable() {
+        @Override
+        public void run() {
+            if (!appLoaded || webViewHost == null) {
+                return;
+            }
+            WebView wv = webViewHost.getWebView();
+            if (wv == null) {
+                return;
+            }
+            try {
+                wv.evaluateJavascript(
+                        "(function(){ try { "
+                                + "window.dispatchEvent(new CustomEvent('agy:network-online')); "
+                                + "window.dispatchEvent(new Event('online')); "
+                                + "} catch(e){} })();",
+                        null);
+            } catch (Exception e) {
+                Log.w(TAG, "failed to dispatch network-online to webView", e);
+            }
+        }
+    };
 
     /**
      * Runs for the whole activity life: it drives the splash, loads the app on
@@ -148,7 +175,9 @@ public class MainActivity extends Activity
         oauthManager = new OAuthManager();
         runtimeManager = new RuntimeManager(this);
         shizukuBridge = new ShizukuBridge(this);
-        androidBridge = new AndroidBridge(this, runtimeManager, shizukuBridge, themeManager);
+        rootBridge = new RootBridge(this);
+        rootBridge.probeAsync(true);
+        androidBridge = new AndroidBridge(this, runtimeManager, shizukuBridge, rootBridge, themeManager);
         androidBridge.setActivity(this);
         webViewHost = new WebViewHost(this, themeManager, oauthManager, androidBridge, this);
         webViewHost.setListener(this);
@@ -165,6 +194,7 @@ public class MainActivity extends Activity
         splash.loadInitial();
 
         splash.installExitAnimation(this);
+        rootNoticeBanner = new RootNoticeBanner(this, rootLayout, themeManager, rootBridge);
 
         splashDeadline = System.currentTimeMillis() + SPLASH_TIMEOUT_MS;
         requestAppPermissions();
@@ -218,6 +248,9 @@ public class MainActivity extends Activity
     public void dismissSplash() {
         Log.i(TAG, "dismissSplash: fading out splashView (280ms)");
         splash.dismiss();
+        if (rootNoticeBanner != null) {
+            rootNoticeBanner.evaluateAndShow();
+        }
     }
 
     public boolean isDesktopMode() {
@@ -232,11 +265,21 @@ public class MainActivity extends Activity
         }
     }
 
+    /** Called from NetworkMonitorHolder when connectivity recovers or switches. */
+    public void notifyNetworkRecovered() {
+        handler.removeCallbacks(notifyWebViewNetworkOnline);
+        handler.postDelayed(notifyWebViewNetworkOnline, NETWORK_NOTIFY_DEBOUNCE_MS);
+    }
+
     @Override
     protected void onDestroy() {
         activityResumed = false;
         if (activeActivity == this) {
             activeActivity = null;
+        }
+        handler.removeCallbacks(notifyWebViewNetworkOnline);
+        if (rootNoticeBanner != null) {
+            rootNoticeBanner.hide();
         }
         AppLifecycle.destroy(handler);
         if (androidBridge != null) {
@@ -306,6 +349,9 @@ public class MainActivity extends Activity
         super.onResume();
         activityResumed = true;
         activeActivity = this;
+        if (rootBridge != null) {
+            rootBridge.probeAsync(true);
+        }
         if (webViewHost != null) {
             AppLifecycle.resume(webViewHost.getWebView());
         }
