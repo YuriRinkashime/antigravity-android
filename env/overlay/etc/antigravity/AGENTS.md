@@ -98,6 +98,15 @@ When the device is rooted and Superuser is granted to Antigravity, the agent can
   # Automatically fall back to Shizuku (rish) if root is unavailable:
   agy-root --fallback-rish -c "<command>"
   ```
+- **System Power-User Helper (`agy-sys`):**
+  ```bash
+  agy-sys info              # Android, kernel, SELinux, root, RAM, Doze & OOM status
+  agy-sys protect           # Whitelist com.agy in Doze & set oom_score_adj=-100
+  agy-sys modules           # List KernelSU / bakaSU / Magisk modules
+  agy-sys install <app.apk> # Silent root/Shizuku APK install
+  agy-sys logcat [lines]    # Filtered Antigravity / crash logcat
+  agy-sys android-data      # Browse /storage/emulated/0/Android/data via -mm
+  ```
 - **If Root Is Not Granted (Always Guide the User Clearly):**
   - **KernelSU / bakaSU / KernelSU-Next / SukiSU:** KernelSU-based root managers hide `/system/bin/su` until granted. Ask the user to open their KernelSU / bakaSU Manager, grant Superuser access to Antigravity (`com.agy`), and **restart the app**.
   - **Sui module (Magisk / KernelSU Shizuku module):** Ask the user to allow Antigravity in Sui / Shizuku Manager and **restart the app**.

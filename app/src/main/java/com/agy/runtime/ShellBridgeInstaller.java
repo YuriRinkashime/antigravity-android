@@ -35,10 +35,10 @@ public final class ShellBridgeInstaller {
     /** Records which prefix the bulk bridges were generated for. Bump when the
      *  bridge script format changes so a warm launch regenerates them once. */
     private static final String BRIDGE_MARKER = ".agy-bridges";
-    private static final int BRIDGE_FORMAT = 4;
+    private static final int BRIDGE_FORMAT = 5;
 
     private static final String[] PRIVILEGE_SHIMS = {
-            "rish", "su", "sudo", "agy-root"
+            "rish", "su", "sudo", "agy-root", "agy-sys"
     };
 
     private ShellBridgeInstaller() {
@@ -137,9 +137,9 @@ public final class ShellBridgeInstaller {
         String appId = rm.appContext().getPackageName();
         writeBridge(new File(bin, "bash"), prefix, "bash", appId);
         writeBridge(new File(bin, "sh"), prefix, "bash", appId);
-        // Remove stale privilege-tool bridges (su/sudo/agy-root) so PATH resolves
+        // Remove stale privilege-tool bridges (su/sudo/agy-root/agy-sys) so PATH resolves
         // directly to $PREFIX/bin without injecting Bionic LD_LIBRARY_PATH before `su`.
-        for (String priv : new String[]{"su", "sudo", "agy-root"}) {
+        for (String priv : new String[]{"su", "sudo", "agy-root", "agy-sys"}) {
             File stale = new File(bin, priv);
             if (stale.isFile()) {
                 stale.delete();
@@ -263,6 +263,7 @@ public final class ShellBridgeInstaller {
         sb.append("unset LD_PRELOAD\n");
         sb.append("export LD_LIBRARY_PATH=\"$PREFIX/lib\"\n");
         sb.append("export PATH=\"$PREFIX/bin:/system/bin\"\n");
+        sb.append("export GODEBUG=\"netdns=cgo\"\n");
         sb.append("export TERM=\"xterm-256color\"\n");
         sb.append("export TERMINFO=\"$PREFIX/share/terminfo\"\n");
         sb.append("export OPENSSL_CONF=\"$PREFIX/etc/tls/openssl.cnf\"\n");

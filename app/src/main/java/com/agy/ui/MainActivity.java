@@ -60,6 +60,11 @@ public class MainActivity extends Activity
     private static final long NETWORK_NOTIFY_DEBOUNCE_MS = 800;
 
     public static volatile MainActivity activeActivity;
+    private static volatile boolean sInForeground = false;
+
+    public static boolean isInForeground() {
+        return sInForeground;
+    }
 
     private ValueCallback<Uri[]> filePathCallback;
     private android.webkit.PermissionRequest pendingPermissionRequest;
@@ -73,6 +78,7 @@ public class MainActivity extends Activity
     private WebViewHost webViewHost;
     private SplashController splash;
     private RootNoticeBanner rootNoticeBanner;
+    private QuickControlSheet quickControlSheet;
     private FrameLayout rootLayout;
 
     private boolean appLoaded = false;
@@ -195,6 +201,7 @@ public class MainActivity extends Activity
 
         splash.installExitAnimation(this);
         rootNoticeBanner = new RootNoticeBanner(this, rootLayout, themeManager, rootBridge);
+        quickControlSheet = new QuickControlSheet(this, rootLayout, themeManager, rootBridge, shizukuBridge);
 
         splashDeadline = System.currentTimeMillis() + SPLASH_TIMEOUT_MS;
         requestAppPermissions();
@@ -214,6 +221,11 @@ public class MainActivity extends Activity
     /** Keep the splash visible and replace it with a readable failure message. */
     public void showFatalError(String message) {
         splash.showFatalError(message);
+    }
+
+    /** Public trigger for QuickControlSheet to restart the core server cleanly. */
+    public void restartCoreFromUser() {
+        retryCore();
     }
 
     /** Retry re-runs install + start: stop the service, then start it again. */
@@ -251,6 +263,9 @@ public class MainActivity extends Activity
         if (rootNoticeBanner != null) {
             rootNoticeBanner.evaluateAndShow();
         }
+        if (quickControlSheet != null) {
+            quickControlSheet.attachPill();
+        }
     }
 
     public boolean isDesktopMode() {
@@ -274,6 +289,7 @@ public class MainActivity extends Activity
     @Override
     protected void onDestroy() {
         activityResumed = false;
+        sInForeground = false;
         if (activeActivity == this) {
             activeActivity = null;
         }
@@ -281,6 +297,10 @@ public class MainActivity extends Activity
         if (rootNoticeBanner != null) {
             rootNoticeBanner.hide();
         }
+        if (quickControlSheet != null) {
+            quickControlSheet.destroy();
+        }
+        com.agy.ui.download.FileDownloader.clearPendingTask();
         AppLifecycle.destroy(handler);
         if (androidBridge != null) {
             androidBridge.setActivity(null);
@@ -332,6 +352,7 @@ public class MainActivity extends Activity
     @Override
     protected void onPause() {
         activityResumed = false;
+        sInForeground = false;
         handler.removeCallbacks(pollServer);
         if (webViewHost != null) {
             AppLifecycle.pause(webViewHost.getWebView());
@@ -341,6 +362,7 @@ public class MainActivity extends Activity
 
     @Override
     protected void onStop() {
+        sInForeground = false;
         super.onStop();
     }
 
@@ -348,6 +370,7 @@ public class MainActivity extends Activity
     protected void onResume() {
         super.onResume();
         activityResumed = true;
+        sInForeground = true;
         activeActivity = this;
         if (rootBridge != null) {
             rootBridge.probeAsync(true);
@@ -362,6 +385,9 @@ public class MainActivity extends Activity
 
     private void refreshTheme() {
         ThemeRefresher.refresh(this, themeManager, rootLayout, splash, webViewHost);
+        if (quickControlSheet != null) {
+            quickControlSheet.refreshTheme();
+        }
         if (webViewHost != null && webViewHost.getWebView() != null) {
             String resolved = themeManager != null ? themeManager.getTheme() : "light";
             webViewHost.getWebView().evaluateJavascript(
@@ -371,6 +397,10 @@ public class MainActivity extends Activity
 
     @Override
     public void onBackPressed() {
+        if (quickControlSheet != null && quickControlSheet.isSheetOpen()) {
+            quickControlSheet.closeSheet();
+            return;
+        }
         if (!BackNavigator.handle(webViewHost != null ? webViewHost.getWebView() : null)) {
             super.onBackPressed();
         }

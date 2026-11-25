@@ -21,6 +21,7 @@ import java.security.SecureRandom;
  */
 public final class AndroidBridge {
 
+    private final Context appContext;
     private final UiBridge ui = new UiBridge();
     private final ThemeBridge themeBridge;
     private final EngineBridge engine;
@@ -35,10 +36,10 @@ public final class AndroidBridge {
 
     public AndroidBridge(Context context, RuntimeManager runtime,
                          ShizukuBridge shizuku, RootBridge root, ThemeManager theme) {
-        Context appContext = context.getApplicationContext();
+        this.appContext = context.getApplicationContext();
         this.themeBridge = new ThemeBridge(theme);
         this.engine = new EngineBridge(runtime);
-        this.config = new EngineConfigJson(appContext, runtime, engine, shizuku, root, themeBridge);
+        this.config = new EngineConfigJson(this.appContext, runtime, engine, shizuku, root, themeBridge);
     }
 
     /** Host activity, used to dismiss the native splash once the UI has painted. */
@@ -128,6 +129,23 @@ public final class AndroidBridge {
     /** Native-only token inserted into the trusted top-level document. */
     public String getBlobBridgeToken() {
         return blobBridgeToken;
+    }
+
+    /**
+     * Posts a native Android notification when the agent completes a task or requires
+     * action while the host activity is backgrounded. Guarded by the top-level document token.
+     */
+    @JavascriptInterface
+    public void notifyAgentEvent(String token, String eventType, String title, String body) {
+        if (!matchesNativeBridgeToken(token)) {
+            return;
+        }
+        if (MainActivity.isInForeground()) {
+            return;
+        }
+        String tag = (eventType != null && !eventType.trim().isEmpty())
+                ? ("agy_agent_" + eventType.trim()) : "agy_agent_done";
+        com.agy.gateway.handlers.NotificationHandler.postAgentAlert(appContext, tag, title, body);
     }
 
     /** Saves a downloaded blob only for scripts holding the top-level document token. */

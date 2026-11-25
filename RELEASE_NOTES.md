@@ -1,3 +1,17 @@
+# Antigravity for Android v2.34.13
+
+## Phase 2 Highlights (Anti-Kill Resilience, Quick-Control Sheet, `agy-sys` & Completion Notifications)
+
+* **Crash & Anti-Kill Resilience (`RootResilience` & `FileDownloader`):**
+  * Automatically whitelists `com.agy` in Android Doze and gently lowers `oom_score_adj` (`-100`) for Antigravity and `language_server` when root is granted, preventing aggressive LMKD kills when switching apps.
+  * Fixed the static 64 MiB Base64 RAM leak in `FileDownloader` by spilling pending blob downloads to cache temp files with automatic cleanup on cancel/destroy.
+  * Exported `GODEBUG=netdns=cgo` inside `ShellBridgeInstaller` (`BRIDGE_FORMAT=5`) so Go CLI tools installed via `pkg` (`gh`, `go`, `lazygit`) resolve Android DNS cleanly.
+* **Native Quick-Control & Diagnostics Sheet (`QuickControlSheet`):** Compact draggable `AGY` edge pill opening a theme-aware control sheet for live Root/Sui status + Re-check, one-tap Anti-Kill protection, Desktop Mode toggle, Core Restart, and Log Copy/Export.
+* **Root Power-User CLI (`agy-sys`):** Bundled helper for `info`, `protect` (Doze/OOM), `modules` (KernelSU/bakaSU/Magisk), `install` (`pm install -r`), `logcat`, and `android-data` (`-mm`).
+* **Clickable Background Agent Notifications (`agent_notify.js` + `NotificationHandler`):** Bridges task-finished and action-required cues to high-priority clickable Android notifications when Antigravity is backgrounded; tapping jumps straight back to the app.
+
+---
+
 # Antigravity for Android v2.34.12
 
 ## Release Highlights (Root Support, Git TLS Fix & Stream Recovery)
