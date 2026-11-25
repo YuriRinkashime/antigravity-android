@@ -318,6 +318,22 @@ public final class QuickControlSheet {
             }
         }));
 
+        card.addView(makeSheetButton("Backup Chats & Settings (to Downloads)", btnBg, titleCol, borderCol, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                closeSheet();
+                StateBackupManager.backupChatsAsync(activity);
+            }
+        }));
+
+        card.addView(makeSheetButton("Restore Latest Chats Backup", btnBg, titleCol, borderCol, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                closeSheet();
+                StateBackupManager.promptRestoreLatest(activity);
+            }
+        }));
+
         card.addView(makeSheetButton("Copy Diagnostics Logs", btnBg, titleCol, borderCol, new View.OnClickListener() {
             @Override
             public void onClick(View v) {

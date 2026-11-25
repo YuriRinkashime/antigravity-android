@@ -17,7 +17,7 @@
 
   [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://android.com)
   [![Arch](https://img.shields.io/badge/ARM64-v8.0--A%2B-blue?style=flat-square)](https://arm.com)
-  [![Release](https://img.shields.io/badge/Version-2.34.13-blueviolet?style=flat-square)](https://github.com/YuriRinkashime/antigravity-android/releases)
+  [![Release](https://img.shields.io/badge/Version-2.34.14-blueviolet?style=flat-square)](https://github.com/YuriRinkashime/antigravity-android/releases)
   [![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)](LICENSE)
 
   <br/>
@@ -52,11 +52,12 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 
 ---
 
-### Highlights in v2.34.13 (Root Edition)
+### Highlights in v2.34.14 (Root Edition)
 
 * **Native Root Access (`RootBridge`, `agy-root`, `sudo`, `su`, `agy-sys`):** First-class `uid=0` support for **KernelSU / bakaSU / KernelSU-Next / SukiSU**, **Magisk**, and **APatch**, with global mount namespace (`-mm`), preserved `$HOME`/`$PREFIX`/`$PATH` + TLS certs, and automatic `--fallback-rish` fallback.
+* **Portable Chat & Settings Backup / Restore (`StateBackupManager` & `agy-sys backup/restore`):** 1-tap `.zip` backup and restore of all local chats, brain artifacts, and rules to `Download/Antigravity-Backups/` so your history survives uninstalls, Clear Data, and ROM flashes.
 * **Crash & Anti-Kill Resilience (`RootResilience` & `FileDownloader`):** Automatic root Doze whitelisting + gentle LMKD `oom_score_adj` protection (`-100`), fixed 64 MiB static Base64 RAM leak, and `GODEBUG=netdns=cgo` fix for Go CLI tools (`gh`, `go`, `lazygit`).
-* **Native Quick-Control Sheet & Root/Sui Notice (`QuickControlSheet` & `RootNoticeBanner`):** Draggable `AGY` edge pill for live Root/Sui status, Re-check, Anti-Kill protection, Desktop Mode, Core Restart, and Log Export — plus guided KernelSU/bakaSU & Sui setup prompts.
+* **Native Quick-Control Sheet & Root/Sui Notice (`QuickControlSheet` & `RootNoticeBanner`):** Draggable `AGY` edge pill for live Root/Sui status, Re-check, Anti-Kill protection, Backup/Restore, Desktop Mode, Core Restart, and Log Export — plus guided KernelSU/bakaSU & Sui setup prompts.
 * **Clickable Background Agent Notifications:** Native high-priority Android notifications when the agent finishes a task or needs approval while backgrounded.
 * **Out-of-the-Box Git HTTPS & Stream Auto-Recovery:** Bundled `GIT_SSL_CAINFO` across all shell bridges and network-aware WebView stream recovery.
 

@@ -21,12 +21,102 @@ Usage: agy-sys <subcommand> [args...]
 Subcommands:
   info                    Show Android, kernel, root manager, RAM, Doze & OOM status
   protect                 Whitelist Antigravity from Doze & protect PIDs from LMKD (oom_score_adj=-100)
+  backup [--full] [file]  Archive $HOME/.gemini chats & settings (.zip) to Download/Antigravity-Backups/
+  restore <file|latest>   Restore a .zip backup into $HOME/.gemini (compatible with in-app Restore)
   modules                 List installed KernelSU / bakaSU / Magisk modules (/data/adb/modules)
   install <path.apk>      Silently install/upgrade an APK via pm install -r
   logcat [lines]          Show recent Android logcat filtered for Antigravity / crashes (default: 120)
   android-data [subpath]  List /storage/emulated/0/Android/data[/subpath] using global mount namespace (-mm)
   help                    Show this help message
 EOF
+}
+
+cmd_backup() {
+  FULL=0
+  OUT=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --full) FULL=1; shift ;;
+      *) OUT="$1"; shift ;;
+    esac
+  done
+  H="${HOME:-/data/user/0/$PKG/files}"
+  if [ ! -d "$H/.gemini" ]; then
+    echo "agy-sys: no .gemini directory found at $H/.gemini" >&2
+    exit 1
+  fi
+  BDIR="/storage/emulated/0/Download/Antigravity-Backups"
+  mkdir -p "$BDIR" 2>/dev/null || true
+  if [ -z "$OUT" ]; then
+    OUT="$BDIR/agy-backup-$(date +%Y%m%d-%H%M%S).zip"
+  fi
+  PY="${PREFIX:-$H/usr}/bin/python3"
+  [ ! -x "$PY" ] && PY="python3"
+  LD_LIBRARY_PATH="${PREFIX:-$H/usr}/lib" "$PY" - "$H" "$OUT" "$FULL" <<'PYEOF'
+import os, sys, zipfile
+home, out_zip, full = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+skip = {".gemini/antigravity-app/builtin", ".gemini/antigravity-app/crashes"}
+if not full:
+    skip.add(".gemini/antigravity-app/scratch")
+count = 0
+with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    for root, dirs, files in os.walk(os.path.join(home, ".gemini")):
+        rel_root = os.path.relpath(root, home).replace("\\", "/")
+        dirs[:] = [d for d in dirs if f"{rel_root}/{d}" not in skip]
+        if rel_root in skip:
+            continue
+        for f in files:
+            abs_p = os.path.join(root, f)
+            rel_p = os.path.relpath(abs_p, home).replace("\\", "/")
+            if os.path.isfile(abs_p):
+                zf.write(abs_p, rel_p)
+                count += 1
+size_kb = max(1, os.path.getsize(out_zip) // 1024)
+print(f"[OK] Backed up {count} files ({size_kb} KB) -> {out_zip}")
+PYEOF
+}
+
+cmd_restore() {
+  if [ $# -lt 1 ]; then
+    echo "Usage: agy-sys restore <backup.zip|latest>" >&2
+    exit 2
+  fi
+  SRC="$1"
+  BDIR="/storage/emulated/0/Download/Antigravity-Backups"
+  if [ "$SRC" = "latest" ]; then
+    SRC="$(ls -t "$BDIR"/*.zip 2>/dev/null | head -n 1 || true)"
+    if [ -z "$SRC" ]; then
+      echo "agy-sys: no .zip backups found in $BDIR" >&2
+      exit 1
+    fi
+  fi
+  if [ ! -f "$SRC" ]; then
+    echo "agy-sys: backup file not found: $SRC" >&2
+    exit 1
+  fi
+  H="${HOME:-/data/user/0/$PKG/files}"
+  PY="${PREFIX:-$H/usr}/bin/python3"
+  [ ! -x "$PY" ] && PY="python3"
+  LD_LIBRARY_PATH="${PREFIX:-$H/usr}/lib" "$PY" - "$H" "$SRC" <<'PYEOF'
+import os, sys, zipfile
+home, src_zip = os.path.realpath(sys.argv[1]), sys.argv[2]
+gemini_root = os.path.realpath(os.path.join(home, ".gemini"))
+os.makedirs(gemini_root, exist_ok=True)
+count = 0
+with zipfile.ZipFile(src_zip, "r") as zf:
+    for info in zf.infolist():
+        if not info.filename.startswith(".gemini/") or info.is_dir():
+            continue
+        dest = os.path.realpath(os.path.join(home, info.filename))
+        if not (dest == gemini_root or dest.startswith(gemini_root + os.sep)):
+            raise RuntimeError(f"Refusing unsafe path: {info.filename}")
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with zf.open(info, "r") as src_f, open(dest, "wb") as dst_f:
+            dst_f.write(src_f.read())
+        count += 1
+print(f"[OK] Restored {count} files from {src_zip} into {gemini_root}")
+print("Please restart Antigravity to load restored chats and settings.")
+PYEOF
 }
 
 cmd_info() {
@@ -146,6 +236,8 @@ shift
 case "$SUBCMD" in
   info)         cmd_info "$@" ;;
   protect)      cmd_protect "$@" ;;
+  backup)       cmd_backup "$@" ;;
+  restore)      cmd_restore "$@" ;;
   modules)      cmd_modules "$@" ;;
   install)      cmd_install "$@" ;;
   logcat)       cmd_logcat "$@" ;;

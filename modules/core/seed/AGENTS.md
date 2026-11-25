@@ -102,6 +102,8 @@ When the device is rooted and Superuser is granted to Antigravity, the agent can
   ```bash
   agy-sys info              # Android, kernel, SELinux, root, RAM, Doze & OOM status
   agy-sys protect           # Whitelist com.agy in Doze & set oom_score_adj=-100
+  agy-sys backup [--full]   # Portable .zip backup of chats & .gemini to Downloads
+  agy-sys restore latest    # Restore latest .zip backup into $HOME/.gemini
   agy-sys modules           # List KernelSU / bakaSU / Magisk modules
   agy-sys install <app.apk> # Silent root/Shizuku APK install
   agy-sys logcat [lines]    # Filtered Antigravity / crash logcat

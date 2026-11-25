@@ -1,3 +1,12 @@
+# Antigravity for Android v2.34.14
+
+## Portable Chat & Settings Backup / Restore (`StateBackupManager` & `agy-sys`)
+
+* **1-Tap Backup & Restore in `QuickControlSheet`:** Export all local chats (`conversations/`), summaries DB, brain artifacts, and rules (`AGENTS.md`) as a portable `.zip` archive in `Download/Antigravity-Backups/` that survives app uninstalls, Clear Data, and custom ROM flashes.
+* **Cross-Compatible CLI (`agy-sys backup` & `agy-sys restore latest`):** Uses Python `zipfile` (100% compatible with the in-app Restore button and safe against path traversal).
+
+---
+
 # Antigravity for Android v2.34.13
 
 ## Phase 2 Highlights (Anti-Kill Resilience, Quick-Control Sheet, `agy-sys` & Completion Notifications)
