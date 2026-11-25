@@ -71,7 +71,7 @@ No PRoot, chroot, or virtualization overhead. Antigravity runs **bare-metal insi
 | **`v2.34.13`** | **Crash & Anti-Kill Resilience** (`RootResilience` Doze whitelist + OOM protection, `FileDownloader` 64 MiB leak fix, `GODEBUG=netdns=cgo` for Go CLIs), draggable **`AGY` Quick-Control Sheet**, **`agy-sys`** root CLI, and **clickable background agent notifications**. |
 | **`v2.34.12`** | Initial Root Edition: native **`RootBridge`** (KernelSU / bakaSU / Magisk / APatch + `-mm`), **`agy-root` / `sudo` / `su`** wrappers, **`RootNoticeBanner`** (KernelSU/bakaSU & Sui setup guidance), **`GIT_SSL_CAINFO`** fix, and WebView stream auto-recovery. |
 
-See full history in **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+See full history in **[CHANGELOG.md](CHANGELOG.md)** *(and upstream history in [RELEASE_NOTES.md](RELEASE_NOTES.md))*.
 
 ---
 

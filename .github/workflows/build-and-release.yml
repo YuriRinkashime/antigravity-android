@@ -120,7 +120,7 @@ jobs:
             dist/antigravity-region-bypass.apk
             dist/SHA256SUMS.txt
 
-      - name: Generate Release Changelog from RELEASE_NOTES.md
+      - name: Generate Release Changelog from CHANGELOG.md
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         env:
           REL_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
@@ -129,17 +129,18 @@ jobs:
           import os, re
           tag = os.environ.get("REL_TAG", "").strip()
           ver = tag.lstrip("v")
-          notes = open("RELEASE_NOTES.md", encoding="utf-8").read()
-          sections = re.split(r'(?m)^(?=# Antigravity for Android )', notes)
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          sections = re.split(r'(?m)^(?=## \[v)', text)
           chosen = ""
           for s in sections:
-              if ver and f"v{ver}" in s.splitlines()[0]:
-                  chosen = s.strip()
+              first = s.splitlines()[0] if s.strip() else ""
+              if ver and f"[v{ver}]" in first:
+                  chosen = re.sub(r'\n---\s*$', '', s.strip())
                   break
           if not chosen:
               for s in sections:
-                  if s.strip().startswith("# "):
-                      chosen = s.strip()
+                  if s.strip().startswith("## [v"):
+                      chosen = re.sub(r'\n---\s*$', '', s.strip())
                       break
           header = f"""<div align="center">
             <h3>Antigravity for Android {tag}</h3>
@@ -148,28 +149,23 @@ jobs:
 
           ---
 
-          ### Packages & Artifacts
-
-          | Package | Description |
-          | :--- | :--- |
-          | **`antigravity.apk`** | Standard production release with native bionic engine (`com.agy`, port `45157`) |
-          | **`antigravity-region-bypass.apk`** | Region bypass edition with account eligibility check bypass (`com.agy`, port `45157`) |
-          | **`SHA256SUMS.txt`** | Cryptographic checksums for package integrity verification |
-
-          ---
+          ### What's New in {tag}
 
           """
           footer = """
 
           ---
 
-          ### Root & Sui Setup
-          * **KernelSU / bakaSU / KernelSU-Next / SukiSU:** Grant Superuser to **Antigravity (`com.agy`)** in your root manager, then restart the app.
-          * **Sui Module:** Allow **Antigravity (`com.agy`)** in Sui / Shizuku Manager, then restart the app.
-          * **Magisk / APatch:** Grant the Superuser prompt in your manager app.
+          ### Packages & Artifacts
+
+          | Package | Description |
+          | :--- | :--- |
+          | **`antigravity.apk`** | Standard release (`com.agy`, port `45157`) |
+          | **`antigravity-region-bypass.apk`** | Region-bypass edition (`com.agy`, port `45157`) |
+          | **`SHA256SUMS.txt`** | SHA-256 verification checksums |
 
           > [!NOTE]
-          > **Seamless Upgrades:** Signed with the shared upstream keystore (`com.agy`). You can install this update directly over previous v2.x releases without uninstalling or losing chats, settings, or root grants. Full history in [`RELEASE_NOTES.md`](https://github.com/YuriRinkashime/antigravity-android/blob/main/RELEASE_NOTES.md).
+          > **Seamless Upgrades:** Signed with the shared upstream keystore (`com.agy`) — install directly over previous `v2.x` releases without losing chats or root grants. See full history in [`CHANGELOG.md`](https://github.com/YuriRinkashime/antigravity-android/blob/main/CHANGELOG.md).
           """
           with open("dist/RELEASE_BODY.md", "w", encoding="utf-8") as f:
               f.write(header + chosen + footer)
